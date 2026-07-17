@@ -1,0 +1,83 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Bricolage Grotesque";
+  --font-body: "Space Grotesk";
+  --carolina: #7bafd4;
+  --carolina-dark: #4d8cb9;
+  --carolina-dim: rgba(123, 175, 212, 0.08);
+  --carolina-mid: rgba(123, 175, 212, 0.15);
+  --slate: #1a222e;
+  --steel: #3a5570;
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --surface2: #1e1e1e;
+  --surface3: #252525;
+  --text: #f8f9fa;
+  --text-secondary: #b0b8c1;
+  --text-tertiary: #838d98;
+  --text-disabled: #626a73;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
+  --border-accent: rgba(123, 175, 212, 0.4);
+  --status-green: #00c96b;
+  --status-yellow: #f5c000;
+  --status-red: #ff4d4d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  color: var(--text);
+  text-rendering: optimizeLegibility;
+  font-feature-settings:
+    "kern" 1,
+    "liga" 1;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    linear-gradient(180deg, rgba(123, 175, 212, 0.08), transparent 32rem),
+    radial-gradient(circle at 12% 8%, rgba(123, 175, 212, 0.12), transparent 24rem),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font-body), sans-serif;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: var(--carolina);
+  color: var(--slate);
+}
+
+:focus-visible {
+  outline: 2px solid var(--carolina);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
