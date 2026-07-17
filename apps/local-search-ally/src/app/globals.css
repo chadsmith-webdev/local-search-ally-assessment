@@ -1,8 +1,33 @@
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@theme inline {
+  --font-display: var(--font-display), sans-serif;
+  --font-sans: var(--font-body), sans-serif;
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-accent: var(--border-accent);
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-disabled: var(--text-disabled);
+  --color-carolina: var(--carolina);
+  --color-carolina-dark: var(--carolina-dark);
+  --color-carolina-dim: var(--carolina-dim);
+  --color-carolina-mid: var(--carolina-mid);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface2);
+  --color-surface-3: var(--surface3);
+  --color-slate: var(--slate);
+  --color-steel: var(--steel);
+  --color-status-green: var(--status-green);
+  --color-status-yellow: var(--status-yellow);
+  --color-status-red: var(--status-red);
+  --radius-card: 8px;
+  --shadow-focus: 0 0 0 3px rgba(123, 175, 212, 0.28);
+}
 
 :root {
   --font-display: "Bricolage Grotesque";
