@@ -12,6 +12,9 @@ export const assessmentInputSchema = z.object({
   monthlyQualifiedLeads: z.number().int().min(1).max(2000).optional(),
   bookingRatePercent: z.number().min(1).max(100).optional(),
   averageJobValue: z.number().int().min(100).max(100000).optional(),
+  missedCallsPerMonth: z.number().min(0).max(2000).optional(),
+  opportunityLossRateLowPercent: z.number().min(1).max(95).optional(),
+  opportunityLossRateHighPercent: z.number().min(1).max(95).optional(),
 });
 
 export type AssessmentInput = z.infer<typeof assessmentInputSchema>;

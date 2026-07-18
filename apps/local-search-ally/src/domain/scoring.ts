@@ -28,6 +28,14 @@ function opportunityInputsFor(input: AssessmentInput, data: ReturnType<typeof co
   const monthlyQualifiedLeads = input.monthlyQualifiedLeads ?? input.monthlyLeadGoal;
   const hasCompleteSourceData = data.missingSignals.length === 0;
   const weakConfidence = data.missingSignals.length > 0;
+  const knownLossRate =
+    input.missedCallsPerMonth !== undefined && monthlyQualifiedLeads
+      ? Math.min(input.missedCallsPerMonth / monthlyQualifiedLeads, 0.95)
+      : undefined;
+  const suppliedLossLow = input.opportunityLossRateLowPercent ? input.opportunityLossRateLowPercent / 100 : undefined;
+  const suppliedLossHigh = input.opportunityLossRateHighPercent ? input.opportunityLossRateHighPercent / 100 : undefined;
+  const lossLow = suppliedLossLow ?? knownLossRate ?? (hasCompleteSourceData ? 0.3 : weakConfidence ? 0.45 : 0.4);
+  const lossHigh = suppliedLossHigh ?? knownLossRate ?? (hasCompleteSourceData ? 0.45 : weakConfidence ? 0.7 : 0.6);
 
   return {
     monthlyQualifiedLeads: {
@@ -49,12 +57,20 @@ function opportunityInputsFor(input: AssessmentInput, data: ReturnType<typeof co
     opportunityLossRate: {
       key: "opportunityLossRate",
       label: "Opportunity-loss rate",
-      lowValue: hasCompleteSourceData ? 0.3 : weakConfidence ? 0.45 : 0.4,
-      highValue: hasCompleteSourceData ? 0.45 : weakConfidence ? 0.7 : 0.6,
+      lowValue: Math.min(lossLow, lossHigh),
+      highValue: Math.max(lossLow, lossHigh),
       unit: "percent",
-      verification: "inferred",
-      sourceLabel: "Assessment trust and conversion signals",
-      explanation: "This range reflects how much current proof and conversion friction may reduce next-step calls.",
+      verification: knownLossRate !== undefined ? "self-reported" : suppliedLossLow && suppliedLossHigh ? "self-reported" : "inferred",
+      sourceLabel:
+        knownLossRate !== undefined
+          ? "Known missed-call count"
+          : suppliedLossLow && suppliedLossHigh
+          ? "Assessment business assumption"
+          : "Assessment trust and conversion signals",
+      explanation:
+        knownLossRate !== undefined
+          ? "Calculated from the supplied qualified lead volume and missed-call count."
+          : "This range reflects how much current proof and conversion friction may reduce next-step calls.",
       editable: true,
     },
     bookingRate: {
