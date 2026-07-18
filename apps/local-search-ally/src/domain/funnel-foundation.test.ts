@@ -123,7 +123,6 @@ describe("funnel foundation models", () => {
   it("does not expose testing offers or planned resources as purchasable", () => {
     expect(contractorReviewProofSystem.status).toBe("testing");
     expect(contractorReviewProofSystem.checkoutPriceId).toBeUndefined();
-    expect(contractorReviewProofSystem.resources.every((resource) => resource.status === "planned")).toBe(true);
     expect(isOfferReadyForPublicCheckout(contractorReviewProofSystem)).toBe(false);
     expect(getPurchasableOfferForDiagnosis("reviews")).toBeNull();
     expect(getPublicResultsPageOffer(inactiveOfferAssessmentResult)).toBeNull();

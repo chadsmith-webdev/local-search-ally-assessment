@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { contractorReviewProofProduct, isProductReadyForPublicAccess, productSlugSchema } from "./products";
 
 export const diagnosisCategorySchema = z.enum([
   "reviews",
@@ -32,20 +33,9 @@ export const fulfillmentMethodSchema = z.enum([
   "protected-product-page-with-downloads",
 ]);
 
-export const productResourceStatusSchema = z.enum(["planned", "available"]);
-export const productResourceFormatSchema = z.enum(["pdf", "docx", "xlsx", "plain-text", "checklist"]);
-
-export const productResourceSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1),
-  format: productResourceFormatSchema,
-  status: productResourceStatusSchema,
-  downloadPath: z.string().min(1).optional(),
-  requiredForLaunch: z.boolean().default(true),
-});
-
 export const lowTicketOfferSchema = z.object({
   slug: z.string().min(1),
+  productSlug: productSlugSchema,
   name: z.string().min(1),
   version: z.string().min(1),
   status: offerStatusSchema,
@@ -64,7 +54,6 @@ export const lowTicketOfferSchema = z.object({
   productAccessRoute: z.string().min(1),
   deliveryEmailTemplateId: z.string().min(1),
   accessDurationDays: z.number().int().positive().optional(),
-  resources: z.array(productResourceSchema),
 });
 
 export type DiagnosisCategory = z.infer<typeof diagnosisCategorySchema>;
@@ -73,9 +62,6 @@ export type ApprovedOfferSlug = z.infer<typeof approvedOfferSlugSchema>;
 export type ProductType = z.infer<typeof productTypeSchema>;
 export type CheckoutBehavior = z.infer<typeof checkoutBehaviorSchema>;
 export type FulfillmentMethod = z.infer<typeof fulfillmentMethodSchema>;
-export type ProductResourceStatus = z.infer<typeof productResourceStatusSchema>;
-export type ProductResourceFormat = z.infer<typeof productResourceFormatSchema>;
-export type ProductResource = z.infer<typeof productResourceSchema>;
 export type LowTicketOffer = z.infer<typeof lowTicketOfferSchema>;
 
 export interface OfferRecommendationInput {
@@ -92,6 +78,7 @@ export interface AssessmentResultOfferInput {
 
 export const contractorReviewProofSystem = lowTicketOfferSchema.parse({
   slug: "contractor-review-proof-system",
+  productSlug: contractorReviewProofProduct.slug,
   name: "Contractor Review and Proof System",
   version: "1.0",
   status: "testing",
@@ -125,44 +112,6 @@ export const contractorReviewProofSystem = lowTicketOfferSchema.parse({
   fulfillmentMethod: "protected-product-page-with-downloads",
   productAccessRoute: "/products/contractor-review-proof-system",
   deliveryEmailTemplateId: "contractor-review-proof-system-access",
-  resources: [
-    {
-      id: "core-implementation-guide",
-      title: "Core PDF implementation guide",
-      format: "pdf",
-      status: "planned",
-    },
-    {
-      id: "script-pack",
-      title: "Editable review-request script pack",
-      format: "docx",
-      status: "planned",
-    },
-    {
-      id: "job-site-photo-checklist",
-      title: "Printable job-site photo checklist",
-      format: "checklist",
-      status: "planned",
-    },
-    {
-      id: "review-proof-tracker",
-      title: "Review and proof tracking spreadsheet",
-      format: "xlsx",
-      status: "planned",
-    },
-    {
-      id: "thirty-day-action-plan",
-      title: "30-day implementation plan",
-      format: "pdf",
-      status: "planned",
-    },
-    {
-      id: "mobile-script-library",
-      title: "Plain-text script library for mobile copying",
-      format: "plain-text",
-      status: "planned",
-    },
-  ],
 });
 
 export const lowTicketOffers = [contractorReviewProofSystem] satisfies LowTicketOffer[];
@@ -208,16 +157,13 @@ export function getOfferRecommendationForResult(result: AssessmentResultOfferInp
 }
 
 export function isOfferReadyForPublicCheckout(offer: LowTicketOffer) {
-  const requiredResourcesAvailable = offer.resources
-    .filter((resource) => resource.requiredForLaunch)
-    .every((resource) => resource.status === "available" && Boolean(resource.downloadPath));
+  const product = contractorReviewProofProduct.slug === offer.productSlug ? contractorReviewProofProduct : null;
 
-  return (
-    offer.status === "active" &&
-    offer.checkoutBehavior === "hosted-checkout" &&
-    Boolean(offer.checkoutPriceId) &&
-    requiredResourcesAvailable
-  );
+  if (offer.status !== "active") return false;
+  if (offer.checkoutBehavior !== "hosted-checkout") return false;
+  if (!offer.checkoutPriceId) return false;
+  if (!product) return false;
+  return isProductReadyForPublicAccess(product);
 }
 
 export function getPurchasableOfferForDiagnosis(category: DiagnosisCategory) {
