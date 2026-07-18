@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { diagnosisCategorySchema } from "./offers";
+import { opportunityEstimateSchema } from "./opportunity";
 
 export const assessmentInputSchema = z.object({
   businessName: z.string().min(2).max(120),
@@ -8,6 +9,9 @@ export const assessmentInputSchema = z.object({
   websiteUrl: z.url().optional(),
   googleBusinessProfileUrl: z.url().optional(),
   monthlyLeadGoal: z.number().int().min(1).max(2000).optional(),
+  monthlyQualifiedLeads: z.number().int().min(1).max(2000).optional(),
+  bookingRatePercent: z.number().min(1).max(100).optional(),
+  averageJobValue: z.number().int().min(100).max(100000).optional(),
 });
 
 export type AssessmentInput = z.infer<typeof assessmentInputSchema>;
@@ -55,14 +59,6 @@ export const quickWinSchema = z.object({
   completed: z.boolean().default(false),
 });
 
-export const ctaActionIdSchema = z.enum([
-  "book-consultation",
-  "request-assessment-review",
-  "contact-local-search-ally",
-]);
-
-export type CtaActionId = z.infer<typeof ctaActionIdSchema>;
-
 export const assessmentResultSchema = z.object({
   id: z.string().min(4),
   businessName: z.string().min(2).max(120),
@@ -71,6 +67,7 @@ export const assessmentResultSchema = z.object({
   generatedAt: z.iso.datetime(),
   status: z.enum(["complete", "incomplete"]),
   dataLimitations: z.array(z.string().min(4).max(220)).max(6),
+  opportunityEstimate: opportunityEstimateSchema,
   overallScore: z.number().int().min(0).max(100).nullable(),
   headline: z.string().min(8).max(140),
   primaryDiagnosis: z.string().min(8).max(360).nullable(),
@@ -84,7 +81,6 @@ export const assessmentResultSchema = z.object({
   quickWins: z.array(quickWinSchema).max(5),
   nextBestStep: z.string().min(8).max(240).nullable(),
   recommendedOfferSlug: z.string().min(1).nullable(),
-  ctaActionId: ctaActionIdSchema.nullable(),
 });
 
 export type CategoryScoreData = z.infer<typeof categoryScoreSchema>;
@@ -92,13 +88,3 @@ export type SupportingFindingData = z.infer<typeof supportingFindingSchema>;
 export type PriorityActionData = z.infer<typeof priorityActionSchema>;
 export type QuickWinData = z.infer<typeof quickWinSchema>;
 export type AssessmentResult = z.infer<typeof assessmentResultSchema>;
-
-export const ctaRoutes: Record<CtaActionId, string> = {
-  "book-consultation": "/consultation",
-  "request-assessment-review": "/assessment-review",
-  "contact-local-search-ally": "/contact",
-};
-
-export function resolveCtaRoute(actionId: CtaActionId): string {
-  return ctaRoutes[actionId];
-}

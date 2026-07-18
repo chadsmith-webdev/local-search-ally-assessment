@@ -1,5 +1,6 @@
 import type { AssessmentInput, AssessmentResult, CategoryScoreData, Rating } from "./assessment";
 import { collectAssessmentData } from "./data-collection";
+import { calculateOpportunityEstimate, type OpportunityEstimateInputs } from "./opportunity";
 import { getOfferRecommendation } from "./offers";
 import { isAssessmentComplete, verificationForSignal } from "./verification";
 
@@ -23,10 +24,71 @@ function category(id: string, label: string, score: number, summary: string, evi
   };
 }
 
+function opportunityInputsFor(input: AssessmentInput, data: ReturnType<typeof collectAssessmentData>): OpportunityEstimateInputs {
+  const monthlyQualifiedLeads = input.monthlyQualifiedLeads ?? input.monthlyLeadGoal;
+  const hasCompleteSourceData = data.missingSignals.length === 0;
+  const weakConfidence = data.missingSignals.length > 0;
+
+  return {
+    monthlyQualifiedLeads: {
+      key: "monthlyQualifiedLeads",
+      label: "Qualified monthly opportunities",
+      value: monthlyQualifiedLeads,
+      unit: "count",
+      verification: monthlyQualifiedLeads ? "self-reported" : "unavailable",
+      sourceLabel: monthlyQualifiedLeads
+        ? input.monthlyQualifiedLeads
+          ? "Assessment business input"
+          : "Monthly lead goal used as planning proxy"
+        : undefined,
+      explanation: monthlyQualifiedLeads
+        ? "Used as the monthly opportunity volume before applying loss and booking assumptions."
+        : "Needed to estimate missed calls, missed jobs, and revenue opportunity.",
+      editable: true,
+    },
+    opportunityLossRate: {
+      key: "opportunityLossRate",
+      label: "Opportunity-loss rate",
+      lowValue: hasCompleteSourceData ? 0.3 : weakConfidence ? 0.45 : 0.4,
+      highValue: hasCompleteSourceData ? 0.45 : weakConfidence ? 0.7 : 0.6,
+      unit: "percent",
+      verification: "inferred",
+      sourceLabel: "Assessment trust and conversion signals",
+      explanation: "This range reflects how much current proof and conversion friction may reduce next-step calls.",
+      editable: true,
+    },
+    bookingRate: {
+      key: "bookingRate",
+      label: "Call-to-job booking rate",
+      value: input.bookingRatePercent ? input.bookingRatePercent / 100 : undefined,
+      lowValue: input.bookingRatePercent ? undefined : hasCompleteSourceData ? 0.35 : 0.25,
+      highValue: input.bookingRatePercent ? undefined : hasCompleteSourceData ? 0.5 : 0.45,
+      unit: "percent",
+      verification: input.bookingRatePercent ? "self-reported" : "inferred",
+      sourceLabel: input.bookingRatePercent ? "Assessment business input" : "Planning assumption",
+      explanation: "Used to translate estimated missed calls into estimated missed booked jobs.",
+      editable: true,
+    },
+    averageJobValue: {
+      key: "averageJobValue",
+      label: "Average job value",
+      value: input.averageJobValue,
+      unit: "currency",
+      verification: input.averageJobValue ? "self-reported" : "unavailable",
+      sourceLabel: input.averageJobValue ? "Assessment business input" : undefined,
+      explanation: input.averageJobValue
+        ? "Used to translate estimated missed jobs into monthly revenue opportunity."
+        : "Needed before the assessment can show a defensible revenue opportunity estimate.",
+      editable: true,
+    },
+  };
+}
+
 export function scoreAssessment(input: AssessmentInput): AssessmentResult {
   const data = collectAssessmentData(input);
   const complete = isAssessmentComplete(data);
-  const strongPerformance = complete && (input.monthlyLeadGoal ?? 0) >= 100;
+  const opportunityEstimate = calculateOpportunityEstimate(opportunityInputsFor(input, data));
+  const strongPerformance = complete && (input.monthlyLeadGoal ?? input.monthlyQualifiedLeads ?? 0) >= 100;
   const primaryDiagnosisCategory = complete ? (strongPerformance ? "recent-proof" : "trust") : null;
   const supportingDiagnosisCategories = complete
     ? strongPerformance
@@ -104,6 +166,7 @@ export function scoreAssessment(input: AssessmentInput): AssessmentResult {
     generatedAt: new Date("2026-07-17T12:00:00.000Z").toISOString(),
     status: complete ? "complete" : "incomplete",
     dataLimitations: data.missingSignals,
+    opportunityEstimate,
     overallScore,
     headline: strongPerformance
       ? `${input.businessName} is performing well, with the next opportunity in tracking and proof refreshes.`
@@ -222,6 +285,5 @@ export function scoreAssessment(input: AssessmentInput): AssessmentResult {
       ? "Review the Google profile and top local service page together, then fix the proof gaps that would most likely affect call confidence."
       : "Supply the missing website, Google profile, or lead-goal details before relying on recommendations.",
     recommendedOfferSlug,
-    ctaActionId: complete ? "book-consultation" : "request-assessment-review",
   };
 }

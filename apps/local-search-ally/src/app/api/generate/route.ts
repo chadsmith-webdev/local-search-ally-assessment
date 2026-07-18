@@ -14,6 +14,9 @@ export async function GET() {
       market: "Raleigh, NC",
       websiteUrl: "https://example.com",
       googleBusinessProfileUrl: "https://example.com/profile",
+      monthlyQualifiedLeads: 20,
+      bookingRatePercent: 50,
+      averageJobValue: 1200,
     },
   });
 }

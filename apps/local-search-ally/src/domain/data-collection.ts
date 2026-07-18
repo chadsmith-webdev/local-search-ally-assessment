@@ -14,7 +14,9 @@ export interface CollectedAssessmentData {
 export function collectAssessmentData(input: AssessmentInput): CollectedAssessmentData {
   const hasWebsite = Boolean(input.websiteUrl);
   const hasProfile = Boolean(input.googleBusinessProfileUrl);
-  const hasStrongInputs = hasWebsite && hasProfile && (input.monthlyLeadGoal ?? 0) >= 100;
+  const suppliedLeadSignal = input.monthlyLeadGoal ?? input.monthlyQualifiedLeads ?? 0;
+  const hasLeadSignal = suppliedLeadSignal > 0;
+  const hasStrongInputs = hasWebsite && hasProfile && suppliedLeadSignal >= 100;
 
   return {
     profileCompleteness: hasStrongInputs ? 92 : hasProfile ? 78 : 38,
@@ -22,7 +24,7 @@ export function collectAssessmentData(input: AssessmentInput): CollectedAssessme
     localPageQuality: hasStrongInputs ? 86 : hasWebsite ? 72 : 34,
     citationConsistency: hasStrongInputs ? 84 : hasWebsite && hasProfile ? 68 : 46,
     conversionReadiness: hasStrongInputs ? 89 : hasWebsite ? 58 : 32,
-    trackingConfidence: hasStrongInputs ? 78 : input.monthlyLeadGoal ? 62 : 36,
+    trackingConfidence: hasStrongInputs ? 78 : hasLeadSignal ? 62 : 36,
     verifiedSignals: [
       `${input.businessName} trade and market supplied`,
       hasWebsite ? "Website URL supplied" : "",
@@ -31,7 +33,7 @@ export function collectAssessmentData(input: AssessmentInput): CollectedAssessme
     missingSignals: [
       hasWebsite ? "" : "Website URL not supplied",
       hasProfile ? "" : "Google Business Profile URL not supplied",
-      input.monthlyLeadGoal ? "" : "Monthly lead goal not supplied",
+      hasLeadSignal ? "" : "Monthly lead goal or qualified lead volume not supplied",
     ].filter(Boolean),
   };
 }

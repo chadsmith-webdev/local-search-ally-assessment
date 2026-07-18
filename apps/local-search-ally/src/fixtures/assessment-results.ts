@@ -1,4 +1,5 @@
 import type { AssessmentInput, AssessmentResult } from "@/domain/assessment";
+import { calculateOpportunityEstimate } from "@/domain/opportunity";
 import { scoreAssessment } from "@/domain/scoring";
 
 export const standardAssessmentInput: AssessmentInput = {
@@ -7,6 +8,9 @@ export const standardAssessmentInput: AssessmentInput = {
   market: "Raleigh, NC",
   websiteUrl: "https://example.com",
   googleBusinessProfileUrl: "https://example.com/profile",
+  monthlyQualifiedLeads: 20,
+  bookingRatePercent: 50,
+  averageJobValue: 1200,
 };
 
 export const highRiskAssessmentInput: AssessmentInput = {
@@ -22,6 +26,9 @@ export const strongAssessmentInput: AssessmentInput = {
   websiteUrl: "https://example.com",
   googleBusinessProfileUrl: "https://example.com/profile",
   monthlyLeadGoal: 120,
+  monthlyQualifiedLeads: 120,
+  bookingRatePercent: 55,
+  averageJobValue: 1500,
 };
 
 export const longContractorNameInput: AssessmentInput = {
@@ -30,13 +37,26 @@ export const longContractorNameInput: AssessmentInput = {
   market: "Winston-Salem, NC",
   websiteUrl: "https://example.com",
   googleBusinessProfileUrl: "https://example.com/profile",
-  monthlyLeadGoal: 90,
+  monthlyQualifiedLeads: 2000,
+  bookingRatePercent: 75,
+  averageJobValue: 100000,
+};
+
+export const weakOpportunityAssessmentInput: AssessmentInput = {
+  businessName: "Capital City Drain and Leak Repair",
+  trade: "Plumbing contractor",
+  market: "Durham, NC",
+  websiteUrl: "https://example.com",
+  googleBusinessProfileUrl: "https://example.com/profile",
+  monthlyLeadGoal: 30,
+  averageJobValue: 850,
 };
 
 export const sampleAssessmentResult = scoreAssessment(standardAssessmentInput);
 export const highRiskAssessmentResult = scoreAssessment(highRiskAssessmentInput);
 export const strongAssessmentResult = scoreAssessment(strongAssessmentInput);
 export const longContractorNameResult = scoreAssessment(longContractorNameInput);
+export const weakOpportunityAssessmentResult = scoreAssessment(weakOpportunityAssessmentInput);
 
 export const eligibleOfferAssessmentResult = {
   ...sampleAssessmentResult,
@@ -57,6 +77,65 @@ export const ineligibleOfferAssessmentResult = {
 export const inactiveOfferAssessmentResult = {
   ...eligibleOfferAssessmentResult,
   id: "assessment-inactive-review-proof-offer",
+} satisfies AssessmentResult;
+
+export const verifiedMissedCallAssessmentResult = {
+  ...sampleAssessmentResult,
+  id: "assessment-verified-missed-call-data",
+  opportunityEstimate: calculateOpportunityEstimate({
+    monthlyQualifiedLeads: {
+      key: "monthlyQualifiedLeads",
+      label: "Qualified monthly opportunities",
+      value: 20,
+      unit: "count",
+      verification: "verified",
+      sourceLabel: "Verified call-tracking report",
+      explanation: "Verified qualified call opportunities from the most recent monthly report.",
+      editable: true,
+    },
+    opportunityLossRate: {
+      key: "opportunityLossRate",
+      label: "Opportunity-loss rate",
+      lowValue: 0.4,
+      highValue: 0.6,
+      unit: "percent",
+      verification: "verified",
+      sourceLabel: "Verified missed-call review",
+      explanation: "Verified missed or abandoned call exposure from the tracking report.",
+      editable: true,
+    },
+    bookingRate: {
+      key: "bookingRate",
+      label: "Call-to-job booking rate",
+      value: 0.5,
+      unit: "percent",
+      verification: "verified",
+      sourceLabel: "Verified booked-job report",
+      explanation: "Verified percentage of qualified calls that became booked jobs.",
+      editable: true,
+    },
+    averageJobValue: {
+      key: "averageJobValue",
+      label: "Average job value",
+      value: 1200,
+      unit: "currency",
+      verification: "verified",
+      sourceLabel: "Verified sales report",
+      explanation: "Verified average value for recently completed jobs.",
+      editable: true,
+    },
+  }),
+} satisfies AssessmentResult;
+
+export const incompleteOpportunityAssessmentResult = {
+  ...sampleAssessmentResult,
+  id: "assessment-incomplete-opportunity-estimate",
+  opportunityEstimate: highRiskAssessmentResult.opportunityEstimate,
+} satisfies AssessmentResult;
+
+export const activeReadyOfferComponentAssessmentResult = {
+  ...eligibleOfferAssessmentResult,
+  id: "assessment-active-ready-offer-component-only",
 } satisfies AssessmentResult;
 
 export const visualViewports = [

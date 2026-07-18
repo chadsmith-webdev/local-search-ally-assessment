@@ -1,16 +1,32 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { DeterministicAssessmentFallback, ConsultationCTA, LowTicketOfferCTA, QuickWin } from "./assessment-components";
-import { highRiskAssessmentResult, inactiveOfferAssessmentResult, sampleAssessmentResult } from "@/fixtures/assessment-results";
+import { DeterministicAssessmentFallback, LowTicketOfferCTA, QuickWin } from "./assessment-components";
+import {
+  highRiskAssessmentResult,
+  inactiveOfferAssessmentResult,
+  sampleAssessmentResult,
+} from "@/fixtures/assessment-results";
 import { contractorReviewProofSystem } from "@/domain/offers";
 
 describe("assessment product components", () => {
-  it("renders a complete deterministic fallback with accessible headings", () => {
+  it("renders a complete deterministic fallback with opportunity first", () => {
     render(<DeterministicAssessmentFallback result={sampleAssessmentResult} />);
 
     expect(screen.getByRole("heading", { name: sampleAssessmentResult.businessName })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Estimated Monthly Revenue Opportunity" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Review assumptions/i })).toHaveAttribute("href", "#assumptions");
     expect(screen.getByRole("heading", { name: "Primary diagnosis" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Continue/i })).toHaveAttribute("href", "/consultation");
+    expect(screen.queryByRole("link", { name: /Continue/i })).not.toBeInTheDocument();
+  });
+
+  it("does not render overall or category scores in customer-facing results", () => {
+    render(<DeterministicAssessmentFallback result={sampleAssessmentResult} />);
+
+    expect(screen.queryByText("Supporting visibility score")).not.toBeInTheDocument();
+    expect(screen.queryByText("Overall score")).not.toBeInTheDocument();
+    expect(screen.queryByText("Visibility score detail")).not.toBeInTheDocument();
+    expect(screen.queryByText(`${sampleAssessmentResult.overallScore}/100`)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Google profile" })).not.toBeInTheDocument();
   });
 
   it("renders incomplete state without a primary diagnosis", () => {
@@ -18,18 +34,6 @@ describe("assessment product components", () => {
 
     expect(screen.getByRole("heading", { name: "More source data is needed" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Primary diagnosis" })).not.toBeInTheDocument();
-  });
-
-  it("resolves CTA action identifiers to internal routes only", () => {
-    render(
-      <ConsultationCTA
-        actionId="request-assessment-review"
-        label="Request review"
-        summary="Review the source data before using this assessment."
-      />,
-    );
-
-    expect(screen.getByRole("link", { name: /Continue/i })).toHaveAttribute("href", "/assessment-review");
   });
 
   it("renders low-ticket offer facts from the offer registry", () => {

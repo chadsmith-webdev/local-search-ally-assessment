@@ -1,7 +1,27 @@
-import { ArrowRight, CheckCircle2, Circle, ExternalLink, FileText, PhoneCall, ShieldCheck, TriangleAlert } from "lucide-react";
+import {
+  ArrowRight,
+  Calculator,
+  CheckCircle2,
+  Circle,
+  ExternalLink,
+  FileText,
+  PhoneCall,
+  ShieldCheck,
+  TrendingUp,
+  TriangleAlert,
+} from "lucide-react";
 import type * as React from "react";
-import type { AssessmentResult, CtaActionId, Priority, Rating, Severity, Verification } from "@/domain/assessment";
-import { resolveCtaRoute } from "@/domain/assessment";
+import type { AssessmentResult, Priority, Severity, Verification } from "@/domain/assessment";
+import {
+  formatOpportunityInputValue,
+  formatOpportunityRange,
+  type EstimateConfidence as EstimateConfidenceValue,
+  type EstimateEvidenceLevel,
+  type OpportunityEstimate,
+  type OpportunityInput,
+  type OpportunityRange,
+  type RevenueOpportunityRange,
+} from "@/domain/opportunity";
 import type { LowTicketOffer } from "@/domain/offers";
 import { formatOfferPrice, getPublicResultsPageOffer } from "@/domain/offers";
 import { Badge, type BadgeTone } from "@/components/foundation/Badge";
@@ -11,14 +31,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Alert } from "@/components/foundation/Alert";
 import { Container, Grid, Section, Stack } from "@/components/foundation/Layout";
 import { EmptyState } from "@/components/foundation/States";
-import { Progress } from "@/components/foundation/Progress";
 import { cn } from "@/lib/utils";
-
-function toneForRating(rating: Rating): BadgeTone {
-  if (rating === "excellent" || rating === "good") return "good";
-  if (rating === "fair") return "warning";
-  return "danger";
-}
 
 function toneForSeverity(severity: Severity): BadgeTone {
   if (severity === "low") return "good";
@@ -36,6 +49,26 @@ function priorityLabel(priority: Priority) {
   if (priority === "first") return "Priority 1";
   if (priority === "second") return "Priority 2";
   return "Priority 3";
+}
+
+function evidenceLabel(evidenceLevel: EstimateEvidenceLevel) {
+  if (evidenceLevel === "verified") return "Verified";
+  if (evidenceLevel === "estimated") return "Estimated";
+  if (evidenceLevel === "potential-exposure") return "Potential exposure";
+  return "Incomplete";
+}
+
+function confidenceLabel(confidence: EstimateConfidenceValue) {
+  if (confidence === "high") return "High confidence";
+  if (confidence === "moderate") return "Moderate confidence";
+  return "Low confidence";
+}
+
+function inputVerificationLabel(verification: OpportunityInput["verification"]) {
+  if (verification === "verified") return "Verified";
+  if (verification === "self-reported") return "Self-reported";
+  if (verification === "inferred") return "Inferred";
+  return "Unavailable";
 }
 
 export function AssessmentHeader({
@@ -81,60 +114,6 @@ export function AssessmentHeader({
   );
 }
 
-export function OverallScore({ score, label, summary }: { score: number; label: string; summary: string }) {
-  return (
-    <Card className="bg-carolina text-slate">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.08em] text-slate">{label}</p>
-          <p className="mt-2 font-display text-6xl font-semibold leading-none">{score}</p>
-        </div>
-        <p className="max-w-xl text-base font-medium leading-7 text-slate">{summary}</p>
-      </div>
-    </Card>
-  );
-}
-
-export function CategoryScore({
-  label,
-  score,
-  rating,
-  summary,
-  evidence,
-  verification,
-}: {
-  label: string;
-  score: number;
-  rating: Rating;
-  summary: string;
-  evidence: string;
-  verification: Verification;
-}) {
-  return (
-    <Card className="flex min-h-56 flex-col justify-between">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="font-display text-xl font-semibold">{label}</h3>
-          <p className="mt-2 text-sm leading-6 text-text-secondary">{summary}</p>
-        </div>
-        <Badge tone={toneForRating(rating)}>{rating}</Badge>
-      </div>
-      <div className="mt-5">
-        <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="text-text-tertiary">{verificationLabel(verification)}</span>
-          <span className="font-semibold text-foreground">{score}/100</span>
-        </div>
-        <Progress value={score} />
-        <p className="mt-3 text-xs leading-5 text-text-tertiary">{evidence}</p>
-      </div>
-    </Card>
-  );
-}
-
-export function CategoryScoreGrid({ children }: { children: React.ReactNode }) {
-  return <Grid className="grid-cols-1 md:grid-cols-2 xl:grid-cols-3">{children}</Grid>;
-}
-
 export function DataLimitationNotice({ limitations }: { limitations: string[] }) {
   if (!limitations.length) return null;
   return (
@@ -159,6 +138,209 @@ export function IncompleteAssessmentState({ message }: { message: string }) {
     <EmptyState title="More source data is needed">
       <p>{message}</p>
     </EmptyState>
+  );
+}
+
+export function OpportunityGapHero({
+  monthlyRevenueOpportunity,
+  missedCalls,
+  evidenceLevel,
+  confidence,
+  explanation,
+  assumptionsHref = "#assumptions",
+}: {
+  monthlyRevenueOpportunity: RevenueOpportunityRange;
+  missedCalls: OpportunityRange;
+  evidenceLevel: EstimateEvidenceLevel;
+  confidence: EstimateConfidenceValue;
+  explanation: string;
+  assumptionsHref?: string;
+}) {
+  return (
+    <Card className="border-border-accent bg-carolina text-slate">
+      <div className="grid gap-6 lg:grid-cols-[1fr_16rem] lg:items-end">
+        <div>
+          <div className="mb-4 flex flex-wrap gap-2">
+            <Badge tone="neutral">{evidenceLabel(evidenceLevel)}</Badge>
+            <Badge tone="neutral">{confidenceLabel(confidence)}</Badge>
+          </div>
+          <p className="font-display text-5xl font-semibold leading-none sm:text-6xl">
+            {formatOpportunityRange(monthlyRevenueOpportunity, "currency")}
+          </p>
+          <h2 className="mt-3 font-display text-2xl font-semibold">Estimated Monthly Revenue Opportunity</h2>
+          <p className="mt-4 max-w-3xl text-base font-medium leading-7">
+            Your current review and conversion gaps may be preventing approximately{" "}
+            {formatOpportunityRange(missedCalls)} qualified homeowners from taking the next step.
+          </p>
+          <p className="mt-3 max-w-3xl text-sm leading-6">{explanation}</p>
+        </div>
+        <Button asChild variant="secondary">
+          <a href={assumptionsHref}>
+            Review assumptions
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </a>
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+export function MissedCallsMetric({
+  missedCalls,
+  evidenceLevel,
+}: {
+  missedCalls: OpportunityRange;
+  evidenceLevel: EstimateEvidenceLevel;
+}) {
+  return (
+    <Card>
+      <PhoneCall className="mb-3 h-6 w-6 text-carolina" aria-hidden />
+      <p className="text-sm font-semibold text-text-tertiary">Estimated missed calls</p>
+      <p className="mt-2 font-display text-4xl font-semibold text-foreground">{formatOpportunityRange(missedCalls)}</p>
+      <p className="mt-2 text-sm leading-6 text-text-secondary">{evidenceLabel(evidenceLevel)} opportunity estimate</p>
+    </Card>
+  );
+}
+
+export function MissedJobsMetric({
+  missedJobs,
+  evidenceLevel,
+}: {
+  missedJobs: OpportunityRange;
+  evidenceLevel: EstimateEvidenceLevel;
+}) {
+  return (
+    <Card>
+      <TrendingUp className="mb-3 h-6 w-6 text-status-green" aria-hidden />
+      <p className="text-sm font-semibold text-text-tertiary">Estimated missed jobs</p>
+      <p className="mt-2 font-display text-4xl font-semibold text-foreground">{formatOpportunityRange(missedJobs)}</p>
+      <p className="mt-2 text-sm leading-6 text-text-secondary">{evidenceLabel(evidenceLevel)} opportunity estimate</p>
+    </Card>
+  );
+}
+
+export function EstimateConfidence({
+  evidenceLevel,
+  confidence,
+  explanation,
+  limitations,
+}: {
+  evidenceLevel: EstimateEvidenceLevel;
+  confidence: EstimateConfidenceValue;
+  explanation: string;
+  limitations: string[];
+}) {
+  return (
+    <Card>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <Badge tone={evidenceLevel === "verified" ? "good" : evidenceLevel === "incomplete" ? "warning" : "neutral"}>
+          {evidenceLabel(evidenceLevel)}
+        </Badge>
+        <Badge tone={confidence === "high" ? "good" : confidence === "moderate" ? "warning" : "danger"}>
+          {confidenceLabel(confidence)}
+        </Badge>
+      </div>
+      <h3 className="font-display text-xl font-semibold">Evidence and confidence</h3>
+      <p className="mt-2 leading-7 text-text-secondary">{explanation}</p>
+      {limitations.length ? (
+        <ul className="mt-4 list-disc space-y-1 pl-5 text-sm leading-6 text-text-secondary">
+          {limitations.map((limitation) => (
+            <li key={limitation}>{limitation}</li>
+          ))}
+        </ul>
+      ) : null}
+    </Card>
+  );
+}
+
+export function CalculationBreakdown({ steps }: { steps: string[] }) {
+  if (!steps.length) return null;
+
+  return (
+    <Card>
+      <Calculator className="mb-3 h-6 w-6 text-carolina" aria-hidden />
+      <h3 className="font-display text-xl font-semibold">Calculation breakdown</h3>
+      <ol className="mt-4 grid gap-2 text-sm leading-6 text-text-secondary">
+        {steps.map((step, index) => (
+          <li key={`${step}-${index}`} className="rounded-card border border-border bg-surface-2 px-3 py-2">
+            {step}
+          </li>
+        ))}
+      </ol>
+    </Card>
+  );
+}
+
+export function OpportunityAssumption({ input }: { input: OpportunityInput }) {
+  return (
+    <li className="rounded-card border border-border bg-surface p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="font-display text-lg font-semibold">{input.label}</h3>
+          {input.explanation ? <p className="mt-2 text-sm leading-6 text-text-secondary">{input.explanation}</p> : null}
+          {input.sourceLabel ? <p className="mt-2 text-xs font-semibold text-text-tertiary">Source: {input.sourceLabel}</p> : null}
+        </div>
+        <div className="sm:text-right">
+          <p className="font-display text-2xl font-semibold text-foreground">{formatOpportunityInputValue(input)}</p>
+          <div className="mt-2 flex flex-wrap gap-2 sm:justify-end">
+            <Badge tone={input.verification === "unavailable" ? "warning" : "neutral"}>
+              {inputVerificationLabel(input.verification)}
+            </Badge>
+            <Badge tone="neutral">{input.editable ? "Editable later" : "Fixed"}</Badge>
+          </div>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+export function AssumptionList({ inputs, children }: { inputs?: OpportunityInput[]; children?: React.ReactNode }) {
+  return (
+    <Card id="assumptions">
+      <h3 className="font-display text-xl font-semibold">Reviewable assumptions</h3>
+      <ul className="mt-4 grid list-none gap-3 p-0">
+        {children ??
+          inputs?.map((input) => (
+            <OpportunityAssumption key={input.key} input={input} />
+          ))}
+      </ul>
+    </Card>
+  );
+}
+
+export function IncompleteOpportunityState({ estimate }: { estimate: OpportunityEstimate }) {
+  const missingInputs = estimate.inputs.filter((input) => input.verification === "unavailable");
+
+  return (
+    <Alert>
+      <div className="flex gap-3">
+        <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-carolina" aria-hidden />
+        <div>
+          <h2 className="font-display text-xl font-semibold text-foreground">Opportunity estimate is incomplete</h2>
+          <p className="mt-2 leading-7 text-text-secondary">{estimate.explanation}</p>
+          {missingInputs.length ? (
+            <>
+              <p className="mt-4 font-semibold text-foreground">Information needed next</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-text-secondary">
+                {missingInputs.map((input) => (
+                  <li key={input.key}>{input.label}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {estimate.limitations.length ? (
+            <>
+              <p className="mt-4 font-semibold text-foreground">Partial conclusions that remain valid</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-text-secondary">
+                {estimate.limitations.map((limitation) => (
+                  <li key={limitation}>{limitation}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </Alert>
   );
 }
 
@@ -275,26 +457,6 @@ export function NextBestStep({ step }: { step: string }) {
   );
 }
 
-export function ConsultationCTA({ actionId, label, summary }: { actionId: CtaActionId; label: string; summary: string }) {
-  const route = resolveCtaRoute(actionId);
-  return (
-    <Card className="border-border-accent bg-carolina-dim">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="font-display text-2xl font-semibold">{label}</h3>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">{summary}</p>
-        </div>
-        <Button asChild size="lg">
-          <a href={route}>
-            Continue
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </a>
-        </Button>
-      </div>
-    </Card>
-  );
-}
-
 export function LowTicketOfferCTA({
   offer,
   diagnosisConnection,
@@ -369,27 +531,46 @@ export function AssessmentResults({ children }: { children: React.ReactNode }) {
 export function DeterministicAssessmentFallback({ result }: { result: AssessmentResult }) {
   const complete = result.status === "complete";
   const publicOffer = complete ? getPublicResultsPageOffer(result) : null;
+  const estimate = result.opportunityEstimate;
+  const hasCompleteEstimate = Boolean(
+    estimate.monthlyRevenueOpportunity && estimate.missedCalls && estimate.missedJobs && estimate.evidenceLevel !== "incomplete",
+  );
 
   return (
     <AssessmentResults>
       <AssessmentHeader {...result} />
       <DataLimitationNotice limitations={result.dataLimitations} />
+      {hasCompleteEstimate && estimate.monthlyRevenueOpportunity && estimate.missedCalls ? (
+        <OpportunityGapHero
+          monthlyRevenueOpportunity={estimate.monthlyRevenueOpportunity}
+          missedCalls={estimate.missedCalls}
+          evidenceLevel={estimate.evidenceLevel}
+          confidence={estimate.confidence}
+          explanation={estimate.explanation}
+        />
+      ) : (
+        <IncompleteOpportunityState estimate={estimate} />
+      )}
+      {hasCompleteEstimate && estimate.missedCalls && estimate.missedJobs ? (
+        <Grid className="grid-cols-1 md:grid-cols-2">
+          <MissedCallsMetric missedCalls={estimate.missedCalls} evidenceLevel={estimate.evidenceLevel} />
+          <MissedJobsMetric missedJobs={estimate.missedJobs} evidenceLevel={estimate.evidenceLevel} />
+        </Grid>
+      ) : null}
+      <EstimateConfidence
+        evidenceLevel={estimate.evidenceLevel}
+        confidence={estimate.confidence}
+        explanation={estimate.explanation}
+        limitations={estimate.limitations}
+      />
+      {hasCompleteEstimate ? <CalculationBreakdown steps={estimate.calculationSteps} /> : null}
+      <AssumptionList inputs={estimate.inputs} />
       {!complete ? (
         <IncompleteAssessmentState message={result.nextBestStep ?? "Supply more source data before using this assessment."} />
       ) : null}
-      {complete && result.overallScore !== null ? (
-        <OverallScore score={result.overallScore} label="Overall score" summary={result.headline} />
-      ) : null}
       {complete && result.primaryDiagnosis ? <PrimaryDiagnosis diagnosis={result.primaryDiagnosis} /> : null}
-      <ResultsSection title="Score detail">
-        <CategoryScoreGrid>
-          {result.categories.map((item) => (
-            <CategoryScore key={item.id} {...item} />
-          ))}
-        </CategoryScoreGrid>
-      </ResultsSection>
       {complete ? (
-        <ResultsSection title="Evidence">
+        <ResultsSection title="Supporting evidence and risks">
           <Accordion type="single" collapsible defaultValue="findings">
             <AccordionItem value="findings">
               <AccordionTrigger>Supporting findings</AccordionTrigger>
@@ -406,8 +587,9 @@ export function DeterministicAssessmentFallback({ result }: { result: Assessment
           </Accordion>
         </ResultsSection>
       ) : null}
+      {result.nextBestStep ? <NextBestStep step={result.nextBestStep} /> : null}
       {complete ? (
-        <ResultsSection title="Actions">
+        <ResultsSection title="Priority actions">
           <Grid className="grid-cols-1 lg:grid-cols-3">
             {result.priorityActions.map((action) => (
               <PriorityAction key={action.priority} {...action} />
@@ -420,19 +602,11 @@ export function DeterministicAssessmentFallback({ result }: { result: Assessment
           </QuickWinChecklist>
         </ResultsSection>
       ) : null}
-      {result.nextBestStep ? <NextBestStep step={result.nextBestStep} /> : null}
       {publicOffer ? (
         <LowTicketOfferCTA
           offer={publicOffer}
           diagnosisConnection="Your assessment found that recent public proof and homeowner trust signals should be strengthened before broader visibility work."
           checkoutHref={`/checkout/${publicOffer.slug}`}
-        />
-      ) : null}
-      {result.ctaActionId ? (
-        <ConsultationCTA
-          actionId={result.ctaActionId}
-          label={complete ? "Talk through the assessment" : "Request an assessment review"}
-          summary="The next step stays inside Local Search Ally, so generated output never controls destination URLs."
         />
       ) : null}
       <a className="inline-flex items-center gap-2 text-sm font-semibold text-carolina" href="/api/generate">

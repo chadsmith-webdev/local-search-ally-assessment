@@ -61,17 +61,47 @@ describe("funnel foundation models", () => {
 
   it("calculates opportunity estimates deterministically from supplied inputs", () => {
     const estimate = calculateOpportunityEstimate({
-      monthlyQualifiedLeads: { value: 20, unit: "calls", verification: "self-reported" },
-      opportunityLossRate: { lowValue: 0.4, highValue: 0.6, unit: "rate", verification: "inferred" },
-      bookingRate: { value: 0.5, unit: "rate", verification: "self-reported" },
-      averageJobValue: { value: 1200, unit: "currency", verification: "self-reported" },
+      monthlyQualifiedLeads: {
+        key: "monthlyQualifiedLeads",
+        label: "Qualified monthly opportunities",
+        value: 20,
+        unit: "count",
+        verification: "self-reported",
+        editable: true,
+      },
+      opportunityLossRate: {
+        key: "opportunityLossRate",
+        label: "Opportunity-loss rate",
+        lowValue: 0.4,
+        highValue: 0.6,
+        unit: "percent",
+        verification: "inferred",
+        editable: true,
+      },
+      bookingRate: {
+        key: "bookingRate",
+        label: "Call-to-job booking rate",
+        value: 0.5,
+        unit: "percent",
+        verification: "self-reported",
+        editable: true,
+      },
+      averageJobValue: {
+        key: "averageJobValue",
+        label: "Average job value",
+        value: 1200,
+        unit: "currency",
+        verification: "self-reported",
+        editable: true,
+      },
     });
 
     expect(estimate.evidenceLevel).toBe("potential-exposure");
     expect(estimate.confidence).toBe("low");
     expect(estimate.missedCalls).toEqual({ low: 8, high: 12 });
     expect(estimate.missedJobs).toEqual({ low: 4, high: 6 });
-    expect(estimate.monthlyRevenueOpportunity).toEqual({ low: 4800, high: 7200 });
+    expect(estimate.monthlyRevenueOpportunity).toEqual({ low: 4800, high: 7200, currency: "USD" });
+    expect(estimate.calculationSteps.some((step) => step.includes("$4,800–$7,200"))).toBe(true);
   });
 
   it("maps review and proof diagnoses to the Contractor Review and Proof System", () => {

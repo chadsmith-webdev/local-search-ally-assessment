@@ -3,15 +3,19 @@ import { z } from "zod/v4";
 import {
   AssessmentHeader as AssessmentHeaderView,
   AssessmentResults as AssessmentResultsView,
-  CategoryScore as CategoryScoreView,
-  CategoryScoreGrid as CategoryScoreGridView,
-  ConsultationCTA as ConsultationCTAView,
+  AssumptionList as AssumptionListView,
+  CalculationBreakdown as CalculationBreakdownView,
   DataLimitationNotice as DataLimitationNoticeView,
+  EstimateConfidence as EstimateConfidenceView,
   IncompleteAssessmentState as IncompleteAssessmentStateView,
+  IncompleteOpportunityState as IncompleteOpportunityStateView,
   LostCallRisk as LostCallRiskView,
   LowTicketOfferCTA as LowTicketOfferCTAView,
+  MissedCallsMetric as MissedCallsMetricView,
+  MissedJobsMetric as MissedJobsMetricView,
   NextBestStep as NextBestStepView,
-  OverallScore as OverallScoreView,
+  OpportunityAssumption as OpportunityAssumptionView,
+  OpportunityGapHero as OpportunityGapHeroView,
   PrimaryDiagnosis as PrimaryDiagnosisView,
   PriorityAction as PriorityActionView,
   QuickWin as QuickWinView,
@@ -20,8 +24,15 @@ import {
   StrengthSummary as StrengthSummaryView,
   SupportingFinding as SupportingFindingView,
 } from "@/components/product/assessment-components";
-import { ctaActionIdSchema, prioritySchema, ratingSchema, severitySchema, verificationSchema } from "@/domain/assessment";
+import { prioritySchema, severitySchema, verificationSchema } from "@/domain/assessment";
 import { approvedOfferSlugSchema, getOfferBySlug, isOfferReadyForPublicCheckout } from "@/domain/offers";
+import {
+  estimateConfidenceSchema,
+  estimateEvidenceLevelSchema,
+  opportunityInputSchema,
+  opportunityRangeSchema,
+  revenueOpportunityRangeSchema,
+} from "@/domain/opportunity";
 import { promptOptions } from "./prompt-options";
 
 export const AssessmentHeader = defineComponent({
@@ -38,40 +49,6 @@ export const AssessmentHeader = defineComponent({
   component: ({ props }) => <AssessmentHeaderView {...props} />,
 });
 
-export const OverallScore = defineComponent({
-  name: "OverallScore",
-  description: "Shows the supplied overall assessment score and summary for a complete assessment.",
-  props: z.object({
-    score: z.number().int().min(0).max(100),
-    label: z.string(),
-    summary: z.string(),
-  }),
-  component: ({ props }) => <OverallScoreView {...props} />,
-});
-
-export const CategoryScore = defineComponent({
-  name: "CategoryScore",
-  description: "Shows one supplied category score, rating, verification state, summary, and evidence.",
-  props: z.object({
-    label: z.string(),
-    score: z.number().int().min(0).max(100),
-    rating: ratingSchema,
-    summary: z.string(),
-    evidence: z.string(),
-    verification: verificationSchema,
-  }),
-  component: ({ props }) => <CategoryScoreView {...props} />,
-});
-
-export const CategoryScoreGrid = defineComponent({
-  name: "CategoryScoreGrid",
-  description: "Groups up to six CategoryScore components.",
-  props: z.object({
-    categories: z.array(CategoryScore.ref).min(1).max(6),
-  }),
-  component: ({ props, renderNode }) => <CategoryScoreGridView>{renderNode(props.categories)}</CategoryScoreGridView>,
-});
-
 export const DataLimitationNotice = defineComponent({
   name: "DataLimitationNotice",
   description: "Lists supplied limitations that affect assessment confidence.",
@@ -83,11 +60,104 @@ export const DataLimitationNotice = defineComponent({
 
 export const IncompleteAssessmentState = defineComponent({
   name: "IncompleteAssessmentState",
-  description: "Explains why an incomplete assessment should not show a complete diagnosis or overall score.",
+  description: "Explains why an incomplete assessment should not show a complete diagnosis.",
   props: z.object({
     message: z.string(),
   }),
   component: ({ props }) => <IncompleteAssessmentStateView {...props} />,
+});
+
+export const OpportunityGapHero = defineComponent({
+  name: "OpportunityGapHero",
+  description:
+    "Shows the supplied monthly revenue opportunity range as the primary result hero without changing the supplied values.",
+  props: z.object({
+    monthlyRevenueOpportunity: revenueOpportunityRangeSchema,
+    missedCalls: opportunityRangeSchema,
+    evidenceLevel: estimateEvidenceLevelSchema,
+    confidence: estimateConfidenceSchema,
+    explanation: z.string(),
+  }),
+  component: ({ props }) => <OpportunityGapHeroView {...props} />,
+});
+
+export const MissedCallsMetric = defineComponent({
+  name: "MissedCallsMetric",
+  description: "Shows the supplied missed-call range and evidence level.",
+  props: z.object({
+    missedCalls: opportunityRangeSchema,
+    evidenceLevel: estimateEvidenceLevelSchema,
+  }),
+  component: ({ props }) => <MissedCallsMetricView {...props} />,
+});
+
+export const MissedJobsMetric = defineComponent({
+  name: "MissedJobsMetric",
+  description: "Shows the supplied missed-job range and evidence level.",
+  props: z.object({
+    missedJobs: opportunityRangeSchema,
+    evidenceLevel: estimateEvidenceLevelSchema,
+  }),
+  component: ({ props }) => <MissedJobsMetricView {...props} />,
+});
+
+export const EstimateConfidence = defineComponent({
+  name: "EstimateConfidence",
+  description: "Shows supplied evidence level, confidence, explanation, and limitations.",
+  props: z.object({
+    evidenceLevel: estimateEvidenceLevelSchema,
+    confidence: estimateConfidenceSchema,
+    explanation: z.string(),
+    limitations: z.array(z.string()).max(8),
+  }),
+  component: ({ props }) => <EstimateConfidenceView {...props} />,
+});
+
+export const CalculationBreakdown = defineComponent({
+  name: "CalculationBreakdown",
+  description: "Shows supplied calculation steps in order without reconstructing formulas.",
+  props: z.object({
+    steps: z.array(z.string()).min(1).max(12),
+  }),
+  component: ({ props }) => <CalculationBreakdownView {...props} />,
+});
+
+export const OpportunityAssumption = defineComponent({
+  name: "OpportunityAssumption",
+  description: "Shows one supplied opportunity assumption, value, source, verification, and editability.",
+  props: opportunityInputSchema,
+  component: ({ props }) => <OpportunityAssumptionView input={props} />,
+});
+
+export const AssumptionList = defineComponent({
+  name: "AssumptionList",
+  description: "Shows the supplied opportunity assumptions in reviewable form.",
+  props: z.object({
+    assumptions: z.array(OpportunityAssumption.ref).length(4),
+  }),
+  component: ({ props, renderNode }) => <AssumptionListView>{renderNode(props.assumptions)}</AssumptionListView>,
+});
+
+export const IncompleteOpportunityState = defineComponent({
+  name: "IncompleteOpportunityState",
+  description: "Explains which supplied opportunity inputs are missing before a defensible estimate can be calculated.",
+  props: z.object({
+    inputs: z.array(opportunityInputSchema).length(4),
+    explanation: z.string(),
+    limitations: z.array(z.string()).min(1).max(8),
+  }),
+  component: ({ props }) => (
+    <IncompleteOpportunityStateView
+      estimate={{
+        evidenceLevel: "incomplete",
+        confidence: "low",
+        inputs: props.inputs,
+        explanation: props.explanation,
+        limitations: props.limitations,
+        calculationSteps: [],
+      }}
+    />
+  ),
 });
 
 export const PrimaryDiagnosis = defineComponent({
@@ -173,17 +243,6 @@ export const NextBestStep = defineComponent({
   component: ({ props }) => <NextBestStepView {...props} />,
 });
 
-export const ConsultationCTA = defineComponent({
-  name: "ConsultationCTA",
-  description: "Shows a CTA that uses an approved internal actionId rather than a model-supplied URL.",
-  props: z.object({
-    actionId: ctaActionIdSchema,
-    label: z.string(),
-    summary: z.string(),
-  }),
-  component: ({ props }) => <ConsultationCTAView {...props} />,
-});
-
 export const LowTicketOfferCTA = defineComponent({
   name: "LowTicketOfferCTA",
   description:
@@ -207,8 +266,13 @@ export const LowTicketOfferCTA = defineComponent({
 });
 
 const sectionChild = z.union([
-  OverallScore.ref,
-  CategoryScoreGrid.ref,
+  OpportunityGapHero.ref,
+  MissedCallsMetric.ref,
+  MissedJobsMetric.ref,
+  EstimateConfidence.ref,
+  CalculationBreakdown.ref,
+  AssumptionList.ref,
+  IncompleteOpportunityState.ref,
   DataLimitationNotice.ref,
   IncompleteAssessmentState.ref,
   PrimaryDiagnosis.ref,
@@ -218,7 +282,6 @@ const sectionChild = z.union([
   PriorityAction.ref,
   QuickWinChecklist.ref,
   NextBestStep.ref,
-  ConsultationCTA.ref,
   LowTicketOfferCTA.ref,
 ]);
 
@@ -235,12 +298,17 @@ export const ResultsSection = defineComponent({
 const rootChild = z.union([
   AssessmentHeader.ref,
   DataLimitationNotice.ref,
+  OpportunityGapHero.ref,
+  MissedCallsMetric.ref,
+  MissedJobsMetric.ref,
+  EstimateConfidence.ref,
+  CalculationBreakdown.ref,
+  AssumptionList.ref,
+  IncompleteOpportunityState.ref,
   IncompleteAssessmentState.ref,
-  OverallScore.ref,
   PrimaryDiagnosis.ref,
   ResultsSection.ref,
   NextBestStep.ref,
-  ConsultationCTA.ref,
   LowTicketOfferCTA.ref,
 ]);
 
@@ -258,9 +326,14 @@ export const assessmentLibrary = createLibrary({
   components: [
     AssessmentResults,
     AssessmentHeader,
-    OverallScore,
-    CategoryScore,
-    CategoryScoreGrid,
+    OpportunityGapHero,
+    MissedCallsMetric,
+    MissedJobsMetric,
+    EstimateConfidence,
+    CalculationBreakdown,
+    OpportunityAssumption,
+    AssumptionList,
+    IncompleteOpportunityState,
     DataLimitationNotice,
     IncompleteAssessmentState,
     PrimaryDiagnosis,
@@ -271,7 +344,6 @@ export const assessmentLibrary = createLibrary({
     QuickWin,
     QuickWinChecklist,
     NextBestStep,
-    ConsultationCTA,
     LowTicketOfferCTA,
     ResultsSection,
   ],
@@ -286,12 +358,23 @@ export const assessmentLibrary = createLibrary({
       ],
     },
     {
-      name: "Scores and Status",
-      components: ["OverallScore", "CategoryScore", "CategoryScoreGrid"],
+      name: "Opportunity Estimate",
+      components: [
+        "OpportunityGapHero",
+        "MissedCallsMetric",
+        "MissedJobsMetric",
+        "EstimateConfidence",
+        "CalculationBreakdown",
+        "OpportunityAssumption",
+        "AssumptionList",
+        "IncompleteOpportunityState",
+      ],
       notes: [
-        "Use no more than one OverallScore.",
-        "Do not use OverallScore for incomplete assessments.",
-        "Use no more than six CategoryScore components.",
+        "Lead with OpportunityGapHero when a complete estimate exists.",
+        "Use IncompleteOpportunityState when a complete estimate does not exist.",
+        "Never change the supplied opportunity range, evidence level, confidence, or input values.",
+        "Display CalculationBreakdown when a complete estimate exists.",
+        "Keep assumptions and limitations visible.",
       ],
     },
     {
@@ -305,14 +388,14 @@ export const assessmentLibrary = createLibrary({
     },
     {
       name: "Actions",
-      components: ["PriorityAction", "QuickWin", "QuickWinChecklist", "NextBestStep", "ConsultationCTA", "LowTicketOfferCTA"],
+      components: ["PriorityAction", "QuickWin", "QuickWinChecklist", "NextBestStep", "LowTicketOfferCTA"],
       notes: [
         "Use no more than three PriorityAction components.",
         "Use no more than five QuickWin components.",
-        "Use no more than one NextBestStep, one ConsultationCTA, and one LowTicketOfferCTA.",
-        "ConsultationCTA must use an approved actionId enum.",
+        "Use no more than one NextBestStep and one LowTicketOfferCTA.",
         "LowTicketOfferCTA must use an approved offerSlug enum.",
         "Never place offer name, price, deliverables, scarcity, checkout URL, or product bonuses in model-written text.",
+        "Do not create an offer substitute when no eligible active offer exists.",
       ],
     },
   ],

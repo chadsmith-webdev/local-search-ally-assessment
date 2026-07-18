@@ -30,13 +30,20 @@ export function countComponents(response: string) {
   const names = [
     "AssessmentResults",
     "AssessmentHeader",
+    "OpportunityGapHero",
+    "MissedCallsMetric",
+    "MissedJobsMetric",
+    "EstimateConfidence",
+    "CalculationBreakdown",
+    "AssumptionList",
+    "IncompleteOpportunityState",
     "OverallScore",
     "CategoryScore",
+    "CategoryScoreGrid",
     "SupportingFinding",
     "PriorityAction",
     "QuickWin",
     "NextBestStep",
-    "ConsultationCTA",
     "LowTicketOfferCTA",
     "PrimaryDiagnosis",
   ];
@@ -55,13 +62,20 @@ export function validateRootAndCounts(response: string, counts = countComponents
     errors.push("Response must start with root = AssessmentResults(...).");
   }
   if (counts.AssessmentHeader !== 1) errors.push("Response must use exactly one AssessmentHeader.");
-  if (counts.OverallScore > 1) errors.push("Response must use no more than one OverallScore.");
-  if (counts.CategoryScore > 6) errors.push("Response must use no more than six CategoryScore components.");
+  if (counts.OpportunityGapHero > 1) errors.push("Response must use no more than one OpportunityGapHero.");
+  if (counts.MissedCallsMetric > 1) errors.push("Response must use no more than one MissedCallsMetric.");
+  if (counts.MissedJobsMetric > 1) errors.push("Response must use no more than one MissedJobsMetric.");
+  if (counts.EstimateConfidence !== 1) errors.push("Response must use exactly one EstimateConfidence.");
+  if (counts.CalculationBreakdown > 1) errors.push("Response must use no more than one CalculationBreakdown.");
+  if (counts.AssumptionList !== 1) errors.push("Response must use exactly one AssumptionList.");
+  if (counts.IncompleteOpportunityState > 1) errors.push("Response must use no more than one IncompleteOpportunityState.");
+  if (counts.OverallScore > 0) errors.push("Response must not use OverallScore.");
+  if (counts.CategoryScore > 0) errors.push("Response must not use CategoryScore.");
+  if (counts.CategoryScoreGrid > 0) errors.push("Response must not use CategoryScoreGrid.");
   if (counts.SupportingFinding > 5) errors.push("Response must use no more than five SupportingFinding components.");
   if (counts.PriorityAction > 3) errors.push("Response must use no more than three PriorityAction components.");
   if (counts.QuickWin > 5) errors.push("Response must use no more than five QuickWin components.");
   if (counts.NextBestStep > 1) errors.push("Response must use no more than one NextBestStep.");
-  if (counts.ConsultationCTA > 1) errors.push("Response must use no more than one ConsultationCTA.");
   if (counts.LowTicketOfferCTA > 1) errors.push("Response must use no more than one LowTicketOfferCTA.");
   return errors;
 }

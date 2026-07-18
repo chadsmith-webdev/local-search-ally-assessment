@@ -31,26 +31,46 @@ describe("OpenUI library", () => {
     const validation = validateOpenUIResponse(standardAssessmentOpenUI);
 
     expect(validation.counts.AssessmentHeader).toBe(1);
-    expect(validation.counts.CategoryScore).toBeLessThanOrEqual(6);
+    expect(validation.counts.OverallScore).toBe(0);
+    expect(validation.counts.CategoryScore).toBe(0);
+    expect(validation.counts.CategoryScoreGrid).toBe(0);
     expect(validation.counts.PriorityAction).toBeLessThanOrEqual(3);
   });
 
-  it("preserves supplied scores in deterministic composition", () => {
+  it("keeps internal scores out of deterministic OpenUI composition", () => {
     const response = composeAssessmentOpenUI(sampleAssessmentResult);
     const validation = validateOpenUIResponse(response);
 
     expect(validation.ok).toBe(true);
-    for (const category of sampleAssessmentResult.categories) {
-      expect(response).toContain(`CategoryScore("${category.label}", ${category.score}`);
-    }
-    expect(response).toContain(`OverallScore(${sampleAssessmentResult.overallScore}`);
+    expect(sampleAssessmentResult.overallScore).toBeTypeOf("number");
+    expect(sampleAssessmentResult.categories.length).toBeGreaterThan(0);
+    expect(response).not.toContain("OverallScore(");
+    expect(response).not.toContain("CategoryScore(");
+    expect(response).not.toContain("CategoryScoreGrid(");
   });
 
-  it("does not render OverallScore for incomplete assessments", () => {
+  it("does not render score components for incomplete assessments", () => {
     const response = composeAssessmentOpenUI(highRiskAssessmentResult);
 
     expect(response).not.toContain("OverallScore(");
+    expect(response).not.toContain("CategoryScore(");
+    expect(response).not.toContain("CategoryScoreGrid(");
     expect(response).toContain("IncompleteAssessmentState(");
+  });
+
+  it("keeps the opportunity hero first after assessment context", () => {
+    const response = composeAssessmentOpenUI(sampleAssessmentResult);
+    const rootLine = response.split("\n")[0];
+
+    expect(rootLine).toContain("AssessmentResults([header, opportunityHero, metricsSection");
+  });
+
+  it("rejects score components in assessment results output", () => {
+    const response = `${composeAssessmentOpenUI(sampleAssessmentResult)}\nscore = OverallScore(67, "Overall score", "Extra score.")`;
+    const validation = validateOpenUIResponse(response);
+
+    expect(validation.ok).toBe(false);
+    expect(validation.errors).toContain("Response must not use OverallScore.");
   });
 
   it("supports strong-performance assessments", () => {

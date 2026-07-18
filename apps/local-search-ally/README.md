@@ -59,13 +59,16 @@ The domain flow is:
 
 The model-facing OpenUI library exposes only product components. Raw foundation primitives such as `Card`, `Grid`, `Stack`, `Badge`, heading, and text components are intentionally not registered.
 
-CTA security uses `actionId` values only:
+The results page is opportunity-first. Deterministic scoring produces the monthly opportunity estimate,
+missed-call range, missed-job range, evidence level, confidence, calculation steps, and assumptions before
+OpenUI composition. OpenUI may arrange approved components, but it must not calculate or alter those values.
 
-- `book-consultation`
-- `request-assessment-review`
-- `contact-local-search-ally`
+Internal assessment scores and category scores remain in the domain model for application logic, testing, and
+future internal reporting. They are not part of the customer-facing results renderer or active OpenUI results
+schema.
 
-Those identifiers resolve to internal routes in `src/domain/assessment.ts`.
+Low-ticket offer CTAs are resolved from the offer registry only. Testing or inactive offers are not displayed
+as purchasable result-page actions.
 
 ## Assumptions
 

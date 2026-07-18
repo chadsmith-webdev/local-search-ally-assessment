@@ -1,12 +1,9 @@
-import type { AssessmentResult, CategoryScoreData, PriorityActionData, QuickWinData, SupportingFindingData } from "@/domain/assessment";
+import type { AssessmentResult, PriorityActionData, QuickWinData, SupportingFindingData } from "@/domain/assessment";
+import type { OpportunityInput } from "@/domain/opportunity";
 import { getPublicResultsPageOffer } from "@/domain/offers";
 
 function q(value: string) {
   return JSON.stringify(value);
-}
-
-function categoryLine(id: string, item: CategoryScoreData) {
-  return `${id} = CategoryScore(${q(item.label)}, ${item.score}, ${q(item.rating)}, ${q(item.summary)}, ${q(item.evidence)}, ${q(item.verification)})`;
 }
 
 function findingLine(id: string, item: SupportingFindingData) {
@@ -21,37 +18,74 @@ function quickWinLine(id: string, item: QuickWinData) {
   return `${id} = QuickWin(${q(item.title)}, ${q(item.checklistLabel)}, ${q(item.impact)}, ${item.completed ? "true" : "false"})`;
 }
 
+function objectValue(value: unknown) {
+  return JSON.stringify(value);
+}
+
+function assumptionLine(id: string, item: OpportunityInput) {
+  return `${id} = OpportunityAssumption(${q(item.key)}, ${q(item.label)}, ${item.value ?? "null"}, ${
+    item.lowValue ?? "null"
+  }, ${item.highValue ?? "null"}, ${q(item.unit)}, ${q(item.verification)}, ${item.sourceLabel ? q(item.sourceLabel) : "null"}, ${
+    item.explanation ? q(item.explanation) : "null"
+  }, ${item.editable ? "true" : "false"})`;
+}
+
 export function composeAssessmentOpenUI(result: AssessmentResult) {
   const complete = result.status === "complete";
   const publicOffer = complete ? getPublicResultsPageOffer(result) : null;
+  const estimate = result.opportunityEstimate;
+  const hasCompleteEstimate = Boolean(
+    estimate.monthlyRevenueOpportunity && estimate.missedCalls && estimate.missedJobs && estimate.evidenceLevel !== "incomplete",
+  );
   const rootItems = ["header"];
   const lines: string[] = [];
 
   if (result.dataLimitations.length) rootItems.push("notice");
+  rootItems.push(hasCompleteEstimate ? "opportunityHero" : "incompleteOpportunity");
+  if (hasCompleteEstimate) rootItems.push("metricsSection");
+  rootItems.push("confidence", hasCompleteEstimate ? "calculation" : "", "assumptions");
   if (!complete) rootItems.push("incomplete");
-  if (complete && result.overallScore !== null) rootItems.push("score");
   if (complete && result.primaryDiagnosis) rootItems.push("diagnosis");
-  rootItems.push("scoreSection");
   if (complete && (result.strengthSummary || result.lostCallRisk || result.supportingFindings.length)) rootItems.push("evidenceSection");
-  if (complete && (result.priorityActions.length || result.quickWins.length)) rootItems.push("actionSection");
   if (result.nextBestStep) rootItems.push("nextStep");
+  if (complete && (result.priorityActions.length || result.quickWins.length)) rootItems.push("actionSection");
   if (publicOffer) rootItems.push("offer");
-  if (result.ctaActionId) rootItems.push("cta");
 
-  lines.push(`root = AssessmentResults([${rootItems.join(", ")}])`);
+  lines.push(`root = AssessmentResults([${rootItems.filter(Boolean).join(", ")}])`);
   lines.push(
     `header = AssessmentHeader(${q(result.businessName)}, ${q(result.trade)}, ${q(result.market)}, ${q(result.generatedAt)}, ${q(result.status)}, ${q(result.headline)})`,
   );
 
   if (result.dataLimitations.length) lines.push(`notice = DataLimitationNotice([${result.dataLimitations.map(q).join(", ")}])`);
+  if (hasCompleteEstimate && estimate.monthlyRevenueOpportunity && estimate.missedCalls && estimate.missedJobs) {
+    lines.push(
+      `opportunityHero = OpportunityGapHero(${objectValue(estimate.monthlyRevenueOpportunity)}, ${objectValue(
+        estimate.missedCalls,
+      )}, ${q(estimate.evidenceLevel)}, ${q(estimate.confidence)}, ${q(estimate.explanation)})`,
+    );
+    lines.push(`metricsSection = ResultsSection("Missed calls and jobs", [missedCalls, missedJobs])`);
+    lines.push(`missedCalls = MissedCallsMetric(${objectValue(estimate.missedCalls)}, ${q(estimate.evidenceLevel)})`);
+    lines.push(`missedJobs = MissedJobsMetric(${objectValue(estimate.missedJobs)}, ${q(estimate.evidenceLevel)})`);
+  } else {
+    lines.push(
+      `incompleteOpportunity = IncompleteOpportunityState([${estimate.inputs.map(objectValue).join(", ")}], ${q(
+        estimate.explanation,
+      )}, [${estimate.limitations.map(q).join(", ")}])`,
+    );
+  }
+  lines.push(
+    `confidence = EstimateConfidence(${q(estimate.evidenceLevel)}, ${q(estimate.confidence)}, ${q(estimate.explanation)}, [${estimate.limitations
+      .map(q)
+      .join(", ")}])`,
+  );
+  if (hasCompleteEstimate) {
+    lines.push(`calculation = CalculationBreakdown([${estimate.calculationSteps.map(q).join(", ")}])`);
+  }
+  const assumptionIds = estimate.inputs.map((_, index) => `assumption${index + 1}`);
+  lines.push(`assumptions = AssumptionList([${assumptionIds.join(", ")}])`);
+  estimate.inputs.forEach((item, index) => lines.push(assumptionLine(assumptionIds[index], item)));
   if (!complete && result.nextBestStep) lines.push(`incomplete = IncompleteAssessmentState(${q(result.nextBestStep)})`);
-  if (complete && result.overallScore !== null) lines.push(`score = OverallScore(${result.overallScore}, "Overall score", ${q(result.headline)})`);
   if (complete && result.primaryDiagnosis) lines.push(`diagnosis = PrimaryDiagnosis(${q(result.primaryDiagnosis)})`);
-
-  const categoryIds = result.categories.map((_, index) => `category${index + 1}`);
-  lines.push(`scoreSection = ResultsSection(${q(complete ? "Score detail" : "Available score signals")}, [scoreGrid])`);
-  lines.push(`scoreGrid = CategoryScoreGrid([${categoryIds.join(", ")}])`);
-  result.categories.forEach((item, index) => lines.push(categoryLine(categoryIds[index], item)));
 
   if (complete) {
     const evidenceItems: string[] = [];
@@ -65,7 +99,7 @@ export function composeAssessmentOpenUI(result: AssessmentResult) {
     }
     const findingIds = result.supportingFindings.map((_, index) => `finding${index + 1}`);
     evidenceItems.push(...findingIds);
-    if (evidenceItems.length) lines.push(`evidenceSection = ResultsSection("Evidence", [${evidenceItems.join(", ")}])`);
+    if (evidenceItems.length) lines.push(`evidenceSection = ResultsSection("Supporting evidence and risks", [${evidenceItems.join(", ")}])`);
     result.supportingFindings.forEach((item, index) => lines.push(findingLine(findingIds[index], item)));
 
     const actionItems: string[] = [];
@@ -80,18 +114,13 @@ export function composeAssessmentOpenUI(result: AssessmentResult) {
       result.quickWins.forEach((item, index) => lines.push(quickWinLine(winIds[index], item)));
     }
 
-    if (actionItems.length) lines.push(`actionSection = ResultsSection("Actions", [${actionItems.join(", ")}])`);
+    if (actionItems.length) lines.push(`actionSection = ResultsSection("Priority actions", [${actionItems.join(", ")}])`);
   }
 
   if (result.nextBestStep) lines.push(`nextStep = NextBestStep(${q(result.nextBestStep)})`);
   if (publicOffer) {
     lines.push(
       `offer = LowTicketOfferCTA(${q(publicOffer.slug)}, "Your assessment found that recent public proof and homeowner trust signals should be strengthened before broader visibility work.")`,
-    );
-  }
-  if (result.ctaActionId) {
-    lines.push(
-      `cta = ConsultationCTA(${q(result.ctaActionId)}, ${q(complete ? "Talk through the assessment" : "Request an assessment review")}, "Use the assessment to decide what should be handled first.")`,
     );
   }
 

@@ -9,8 +9,18 @@ describe("assessment schemas", () => {
     const result = assessmentResultSchema.parse(scoreAssessment(input));
 
     expect(result.status).toBe("complete");
+    expect(result.overallScore).toBeTypeOf("number");
     expect(result.categories).toHaveLength(6);
     expect(result.priorityActions.length).toBeLessThanOrEqual(3);
+  });
+
+  it("keeps internal scores available for diagnosis and recommendation logic", () => {
+    const result = scoreAssessment(standardAssessmentInput);
+
+    expect(result.overallScore).toBeGreaterThan(0);
+    expect(result.categories.map((category) => category.score)).toHaveLength(6);
+    expect(result.primaryDiagnosisCategory).toBe("trust");
+    expect(result.recommendedOfferSlug).toBe("contractor-review-proof-system");
   });
 
   it("rejects malformed URLs", () => {
