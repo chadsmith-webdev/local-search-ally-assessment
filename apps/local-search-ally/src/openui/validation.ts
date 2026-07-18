@@ -37,6 +37,7 @@ export function countComponents(response: string) {
     "QuickWin",
     "NextBestStep",
     "ConsultationCTA",
+    "LowTicketOfferCTA",
     "PrimaryDiagnosis",
   ];
 
@@ -61,6 +62,7 @@ export function validateRootAndCounts(response: string, counts = countComponents
   if (counts.QuickWin > 5) errors.push("Response must use no more than five QuickWin components.");
   if (counts.NextBestStep > 1) errors.push("Response must use no more than one NextBestStep.");
   if (counts.ConsultationCTA > 1) errors.push("Response must use no more than one ConsultationCTA.");
+  if (counts.LowTicketOfferCTA > 1) errors.push("Response must use no more than one LowTicketOfferCTA.");
   return errors;
 }
 

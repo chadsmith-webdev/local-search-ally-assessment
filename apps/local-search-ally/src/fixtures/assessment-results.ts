@@ -1,4 +1,4 @@
-import type { AssessmentInput } from "@/domain/assessment";
+import type { AssessmentInput, AssessmentResult } from "@/domain/assessment";
 import { scoreAssessment } from "@/domain/scoring";
 
 export const standardAssessmentInput: AssessmentInput = {
@@ -37,6 +37,27 @@ export const sampleAssessmentResult = scoreAssessment(standardAssessmentInput);
 export const highRiskAssessmentResult = scoreAssessment(highRiskAssessmentInput);
 export const strongAssessmentResult = scoreAssessment(strongAssessmentInput);
 export const longContractorNameResult = scoreAssessment(longContractorNameInput);
+
+export const eligibleOfferAssessmentResult = {
+  ...sampleAssessmentResult,
+  id: "assessment-eligible-review-proof-offer",
+  primaryDiagnosisCategory: "reviews",
+  supportingDiagnosisCategories: ["recent-proof", "project-proof"],
+  recommendedOfferSlug: "contractor-review-proof-system",
+} satisfies AssessmentResult;
+
+export const ineligibleOfferAssessmentResult = {
+  ...sampleAssessmentResult,
+  id: "assessment-ineligible-review-proof-offer",
+  primaryDiagnosisCategory: "reviews",
+  supportingDiagnosisCategories: ["call-handling"],
+  recommendedOfferSlug: "contractor-review-proof-system",
+} satisfies AssessmentResult;
+
+export const inactiveOfferAssessmentResult = {
+  ...eligibleOfferAssessmentResult,
+  id: "assessment-inactive-review-proof-offer",
+} satisfies AssessmentResult;
 
 export const visualViewports = [
   { name: "phone-320", width: 320, height: 720 },

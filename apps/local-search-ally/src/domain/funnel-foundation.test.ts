@@ -5,12 +5,19 @@ import {
   contractorReviewProofSystem,
   getOfferBySlug,
   getOfferForDiagnosis,
+  getOfferRecommendationForResult,
+  getPublicResultsPageOffer,
   getOfferRecommendation,
   getPurchasableOfferForDiagnosis,
   isOfferReadyForPublicCheckout,
 } from "./offers";
 import { assessmentLeadSchema } from "./leads";
 import { InMemoryIdempotencyStore, InMemoryRepository } from "@/lib/persistence";
+import {
+  eligibleOfferAssessmentResult,
+  inactiveOfferAssessmentResult,
+  ineligibleOfferAssessmentResult,
+} from "@/fixtures/assessment-results";
 
 describe("funnel foundation models", () => {
   it("keeps assessment delivery consent separate from marketing consent", () => {
@@ -81,6 +88,21 @@ describe("funnel foundation models", () => {
     expect(getOfferForDiagnosis("trust")?.slug).toBe("contractor-review-proof-system");
   });
 
+  it("preserves the approved offer price and deliverables in the registry", () => {
+    expect(contractorReviewProofSystem.priceCents).toBe(4700);
+    expect(contractorReviewProofSystem.primaryCtaLabel).toBe("Get the System for $47");
+    expect(contractorReviewProofSystem.includedDeliverables).toEqual([
+      "Review-request workflow",
+      "SMS and email scripts",
+      "Direct review-link setup",
+      "Job-site photo checklist",
+      "Publishing templates",
+      "Review-response templates",
+      "Tracking spreadsheet",
+      "30-day implementation plan",
+    ]);
+  });
+
   it("blocks the first offer when an exclusion diagnosis is present", () => {
     expect(
       getOfferRecommendation({
@@ -91,12 +113,20 @@ describe("funnel foundation models", () => {
     expect(getOfferForDiagnosis("business-info-accuracy")).toBeNull();
   });
 
+  it("uses assessment-result diagnosis fields for offer eligibility", () => {
+    expect(getOfferRecommendationForResult(eligibleOfferAssessmentResult)?.slug).toBe(
+      "contractor-review-proof-system",
+    );
+    expect(getOfferRecommendationForResult(ineligibleOfferAssessmentResult)).toBeNull();
+  });
+
   it("does not expose testing offers or planned resources as purchasable", () => {
     expect(contractorReviewProofSystem.status).toBe("testing");
     expect(contractorReviewProofSystem.checkoutPriceId).toBeUndefined();
     expect(contractorReviewProofSystem.resources.every((resource) => resource.status === "planned")).toBe(true);
     expect(isOfferReadyForPublicCheckout(contractorReviewProofSystem)).toBe(false);
     expect(getPurchasableOfferForDiagnosis("reviews")).toBeNull();
+    expect(getPublicResultsPageOffer(inactiveOfferAssessmentResult)).toBeNull();
   });
 
   it("supports repository and idempotency abstractions without a production datastore", async () => {

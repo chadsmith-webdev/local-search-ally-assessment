@@ -1,7 +1,9 @@
-import { ArrowRight, CheckCircle2, Circle, ExternalLink, PhoneCall, ShieldCheck, TriangleAlert } from "lucide-react";
+import { ArrowRight, CheckCircle2, Circle, ExternalLink, FileText, PhoneCall, ShieldCheck, TriangleAlert } from "lucide-react";
 import type * as React from "react";
 import type { AssessmentResult, CtaActionId, Priority, Rating, Severity, Verification } from "@/domain/assessment";
 import { resolveCtaRoute } from "@/domain/assessment";
+import type { LowTicketOffer } from "@/domain/offers";
+import { formatOfferPrice, getPublicResultsPageOffer } from "@/domain/offers";
 import { Badge, type BadgeTone } from "@/components/foundation/Badge";
 import { Button } from "@/components/foundation/Button";
 import { Card } from "@/components/foundation/Card";
@@ -293,6 +295,59 @@ export function ConsultationCTA({ actionId, label, summary }: { actionId: CtaAct
   );
 }
 
+export function LowTicketOfferCTA({
+  offer,
+  diagnosisConnection,
+  checkoutHref,
+}: {
+  offer: LowTicketOffer;
+  diagnosisConnection: string;
+  checkoutHref: string;
+}) {
+  const price = formatOfferPrice(offer);
+
+  return (
+    <Card className="border-border-accent bg-surface">
+      <div className="grid gap-5 lg:grid-cols-[1fr_18rem] lg:items-start">
+        <div>
+          <p className="mb-2 text-sm font-semibold uppercase tracking-[0.08em] text-carolina">
+            Your recommended first fix
+          </p>
+          <h3 className="font-display text-2xl font-semibold leading-8 text-foreground">{offer.promise}</h3>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-text-secondary">{diagnosisConnection}</p>
+        </div>
+        <div className="rounded-card border border-border bg-surface-2 p-4">
+          <p className="text-sm font-semibold text-text-tertiary">One-time payment</p>
+          <p className="mt-1 font-display text-4xl font-semibold text-foreground">{price}</p>
+          <Button asChild className="mt-4 w-full" size="lg">
+            <a href={checkoutHref}>
+              {offer.primaryCtaLabel}
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </a>
+          </Button>
+        </div>
+      </div>
+      <div className="mt-5 border-t border-border pt-5">
+        <div className="mb-3 flex items-center gap-2">
+          <FileText className="h-5 w-5 text-carolina" aria-hidden />
+          <p className="font-semibold text-foreground">{offer.name}</p>
+        </div>
+        <ul className="grid gap-2 text-sm leading-6 text-text-secondary sm:grid-cols-2">
+          {offer.includedDeliverables.map((deliverable) => (
+            <li key={deliverable} className="flex gap-2">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-status-green" aria-hidden />
+              <span>{deliverable}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 text-xs leading-5 text-text-tertiary">
+          No subscription. No long-term contract. One payment for the complete implementation system.
+        </p>
+      </div>
+    </Card>
+  );
+}
+
 export function ResultsSection({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   if (!children) return null;
   return (
@@ -313,6 +368,7 @@ export function AssessmentResults({ children }: { children: React.ReactNode }) {
 
 export function DeterministicAssessmentFallback({ result }: { result: AssessmentResult }) {
   const complete = result.status === "complete";
+  const publicOffer = complete ? getPublicResultsPageOffer(result) : null;
 
   return (
     <AssessmentResults>
@@ -365,6 +421,13 @@ export function DeterministicAssessmentFallback({ result }: { result: Assessment
         </ResultsSection>
       ) : null}
       {result.nextBestStep ? <NextBestStep step={result.nextBestStep} /> : null}
+      {publicOffer ? (
+        <LowTicketOfferCTA
+          offer={publicOffer}
+          diagnosisConnection="Your assessment found that recent public proof and homeowner trust signals should be strengthened before broader visibility work."
+          checkoutHref={`/checkout/${publicOffer.slug}`}
+        />
+      ) : null}
       {result.ctaActionId ? (
         <ConsultationCTA
           actionId={result.ctaActionId}

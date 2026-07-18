@@ -1,4 +1,5 @@
 import type { AssessmentResult, CategoryScoreData, PriorityActionData, QuickWinData, SupportingFindingData } from "@/domain/assessment";
+import { getPublicResultsPageOffer } from "@/domain/offers";
 
 function q(value: string) {
   return JSON.stringify(value);
@@ -22,6 +23,7 @@ function quickWinLine(id: string, item: QuickWinData) {
 
 export function composeAssessmentOpenUI(result: AssessmentResult) {
   const complete = result.status === "complete";
+  const publicOffer = complete ? getPublicResultsPageOffer(result) : null;
   const rootItems = ["header"];
   const lines: string[] = [];
 
@@ -33,6 +35,7 @@ export function composeAssessmentOpenUI(result: AssessmentResult) {
   if (complete && (result.strengthSummary || result.lostCallRisk || result.supportingFindings.length)) rootItems.push("evidenceSection");
   if (complete && (result.priorityActions.length || result.quickWins.length)) rootItems.push("actionSection");
   if (result.nextBestStep) rootItems.push("nextStep");
+  if (publicOffer) rootItems.push("offer");
   if (result.ctaActionId) rootItems.push("cta");
 
   lines.push(`root = AssessmentResults([${rootItems.join(", ")}])`);
@@ -81,6 +84,11 @@ export function composeAssessmentOpenUI(result: AssessmentResult) {
   }
 
   if (result.nextBestStep) lines.push(`nextStep = NextBestStep(${q(result.nextBestStep)})`);
+  if (publicOffer) {
+    lines.push(
+      `offer = LowTicketOfferCTA(${q(publicOffer.slug)}, "Your assessment found that recent public proof and homeowner trust signals should be strengthened before broader visibility work.")`,
+    );
+  }
   if (result.ctaActionId) {
     lines.push(
       `cta = ConsultationCTA(${q(result.ctaActionId)}, ${q(complete ? "Talk through the assessment" : "Request an assessment review")}, "Use the assessment to decide what should be handled first.")`,

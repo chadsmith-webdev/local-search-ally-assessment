@@ -9,6 +9,7 @@ import {
   DataLimitationNotice as DataLimitationNoticeView,
   IncompleteAssessmentState as IncompleteAssessmentStateView,
   LostCallRisk as LostCallRiskView,
+  LowTicketOfferCTA as LowTicketOfferCTAView,
   NextBestStep as NextBestStepView,
   OverallScore as OverallScoreView,
   PrimaryDiagnosis as PrimaryDiagnosisView,
@@ -20,6 +21,7 @@ import {
   SupportingFinding as SupportingFindingView,
 } from "@/components/product/assessment-components";
 import { ctaActionIdSchema, prioritySchema, ratingSchema, severitySchema, verificationSchema } from "@/domain/assessment";
+import { approvedOfferSlugSchema, getOfferBySlug, isOfferReadyForPublicCheckout } from "@/domain/offers";
 import { promptOptions } from "./prompt-options";
 
 export const AssessmentHeader = defineComponent({
@@ -182,6 +184,28 @@ export const ConsultationCTA = defineComponent({
   component: ({ props }) => <ConsultationCTAView {...props} />,
 });
 
+export const LowTicketOfferCTA = defineComponent({
+  name: "LowTicketOfferCTA",
+  description:
+    "Shows the approved low-ticket offer CTA for a matching diagnosis. Product name, price, deliverables, and checkout route are resolved from the offer registry.",
+  props: z.object({
+    offerSlug: approvedOfferSlugSchema,
+    diagnosisConnection: z.string(),
+  }),
+  component: ({ props }) => {
+    const offer = getOfferBySlug(props.offerSlug);
+    if (!offer || !isOfferReadyForPublicCheckout(offer)) return null;
+
+    return (
+      <LowTicketOfferCTAView
+        offer={offer}
+        diagnosisConnection={props.diagnosisConnection}
+        checkoutHref={`/checkout/${offer.slug}`}
+      />
+    );
+  },
+});
+
 const sectionChild = z.union([
   OverallScore.ref,
   CategoryScoreGrid.ref,
@@ -195,6 +219,7 @@ const sectionChild = z.union([
   QuickWinChecklist.ref,
   NextBestStep.ref,
   ConsultationCTA.ref,
+  LowTicketOfferCTA.ref,
 ]);
 
 export const ResultsSection = defineComponent({
@@ -216,6 +241,7 @@ const rootChild = z.union([
   ResultsSection.ref,
   NextBestStep.ref,
   ConsultationCTA.ref,
+  LowTicketOfferCTA.ref,
 ]);
 
 export const AssessmentResults = defineComponent({
@@ -246,6 +272,7 @@ export const assessmentLibrary = createLibrary({
     QuickWinChecklist,
     NextBestStep,
     ConsultationCTA,
+    LowTicketOfferCTA,
     ResultsSection,
   ],
   componentGroups: [
@@ -278,12 +305,14 @@ export const assessmentLibrary = createLibrary({
     },
     {
       name: "Actions",
-      components: ["PriorityAction", "QuickWin", "QuickWinChecklist", "NextBestStep", "ConsultationCTA"],
+      components: ["PriorityAction", "QuickWin", "QuickWinChecklist", "NextBestStep", "ConsultationCTA", "LowTicketOfferCTA"],
       notes: [
         "Use no more than three PriorityAction components.",
         "Use no more than five QuickWin components.",
-        "Use no more than one NextBestStep and one ConsultationCTA.",
+        "Use no more than one NextBestStep, one ConsultationCTA, and one LowTicketOfferCTA.",
         "ConsultationCTA must use an approved actionId enum.",
+        "LowTicketOfferCTA must use an approved offerSlug enum.",
+        "Never place offer name, price, deliverables, scarcity, checkout URL, or product bonuses in model-written text.",
       ],
     },
   ],

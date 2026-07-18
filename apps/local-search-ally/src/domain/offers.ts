@@ -21,6 +21,7 @@ export const diagnosisCategorySchema = z.enum([
 ]);
 
 export const offerStatusSchema = z.enum(["active", "inactive", "testing"]);
+export const approvedOfferSlugSchema = z.enum(["contractor-review-proof-system"]);
 export const productTypeSchema = z.enum(["download", "protected-content", "interactive-system", "hybrid"]);
 export const checkoutBehaviorSchema = z.enum(["hosted-checkout", "manual-unavailable"]);
 export const fulfillmentMethodSchema = z.enum([
@@ -68,6 +69,7 @@ export const lowTicketOfferSchema = z.object({
 
 export type DiagnosisCategory = z.infer<typeof diagnosisCategorySchema>;
 export type OfferStatus = z.infer<typeof offerStatusSchema>;
+export type ApprovedOfferSlug = z.infer<typeof approvedOfferSlugSchema>;
 export type ProductType = z.infer<typeof productTypeSchema>;
 export type CheckoutBehavior = z.infer<typeof checkoutBehaviorSchema>;
 export type FulfillmentMethod = z.infer<typeof fulfillmentMethodSchema>;
@@ -79,6 +81,13 @@ export type LowTicketOffer = z.infer<typeof lowTicketOfferSchema>;
 export interface OfferRecommendationInput {
   primaryDiagnosisCategory: DiagnosisCategory;
   supportingDiagnosisCategories?: DiagnosisCategory[];
+}
+
+export interface AssessmentResultOfferInput {
+  status: "complete" | "incomplete";
+  primaryDiagnosisCategory: DiagnosisCategory | null;
+  supportingDiagnosisCategories: DiagnosisCategory[];
+  recommendedOfferSlug: string | null;
 }
 
 export const contractorReviewProofSystem = lowTicketOfferSchema.parse({
@@ -162,6 +171,14 @@ export function getOfferBySlug(slug: string) {
   return lowTicketOffers.find((offer) => offer.slug === slug) ?? null;
 }
 
+export function formatOfferPrice(offer: Pick<LowTicketOffer, "priceCents" | "currency">) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: offer.currency,
+    maximumFractionDigits: 0,
+  }).format(offer.priceCents / 100);
+}
+
 export function offerMatchesDiagnosis(offer: LowTicketOffer, input: OfferRecommendationInput) {
   const categories = new Set([input.primaryDiagnosisCategory, ...(input.supportingDiagnosisCategories ?? [])]);
   const excluded = offer.excludedDiagnoses.some((diagnosis) => categories.has(diagnosis));
@@ -175,6 +192,19 @@ export function getOfferRecommendation(input: OfferRecommendationInput) {
 
 export function getOfferForDiagnosis(category: DiagnosisCategory) {
   return getOfferRecommendation({ primaryDiagnosisCategory: category });
+}
+
+export function getOfferRecommendationForResult(result: AssessmentResultOfferInput) {
+  if (result.status !== "complete" || !result.primaryDiagnosisCategory) return null;
+
+  const matchedOffer = getOfferRecommendation({
+    primaryDiagnosisCategory: result.primaryDiagnosisCategory,
+    supportingDiagnosisCategories: result.supportingDiagnosisCategories,
+  });
+
+  if (!matchedOffer) return null;
+  if (result.recommendedOfferSlug && matchedOffer.slug !== result.recommendedOfferSlug) return null;
+  return matchedOffer;
 }
 
 export function isOfferReadyForPublicCheckout(offer: LowTicketOffer) {
@@ -192,6 +222,12 @@ export function isOfferReadyForPublicCheckout(offer: LowTicketOffer) {
 
 export function getPurchasableOfferForDiagnosis(category: DiagnosisCategory) {
   const offer = getOfferForDiagnosis(category);
+  if (!offer) return null;
+  return isOfferReadyForPublicCheckout(offer) ? offer : null;
+}
+
+export function getPublicResultsPageOffer(result: AssessmentResultOfferInput) {
+  const offer = getOfferRecommendationForResult(result);
   if (!offer) return null;
   return isOfferReadyForPublicCheckout(offer) ? offer : null;
 }

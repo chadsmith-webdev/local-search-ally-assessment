@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { diagnosisCategorySchema } from "./offers";
 
 export const assessmentInputSchema = z.object({
   businessName: z.string().min(2).max(120),
@@ -73,6 +74,8 @@ export const assessmentResultSchema = z.object({
   overallScore: z.number().int().min(0).max(100).nullable(),
   headline: z.string().min(8).max(140),
   primaryDiagnosis: z.string().min(8).max(360).nullable(),
+  primaryDiagnosisCategory: diagnosisCategorySchema.nullable(),
+  supportingDiagnosisCategories: z.array(diagnosisCategorySchema).max(6),
   strengthSummary: z.string().min(8).max(300).nullable(),
   lostCallRisk: z.string().min(8).max(320).nullable(),
   categories: z.array(categoryScoreSchema).max(6),
@@ -80,6 +83,7 @@ export const assessmentResultSchema = z.object({
   priorityActions: z.array(priorityActionSchema).max(3),
   quickWins: z.array(quickWinSchema).max(5),
   nextBestStep: z.string().min(8).max(240).nullable(),
+  recommendedOfferSlug: z.string().min(1).nullable(),
   ctaActionId: ctaActionIdSchema.nullable(),
 });
 

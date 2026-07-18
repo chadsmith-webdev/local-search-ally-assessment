@@ -1,5 +1,6 @@
 import type { AssessmentInput, AssessmentResult, CategoryScoreData, Rating } from "./assessment";
 import { collectAssessmentData } from "./data-collection";
+import { getOfferRecommendation } from "./offers";
 import { isAssessmentComplete, verificationForSignal } from "./verification";
 
 function ratingFor(score: number): Rating {
@@ -26,6 +27,18 @@ export function scoreAssessment(input: AssessmentInput): AssessmentResult {
   const data = collectAssessmentData(input);
   const complete = isAssessmentComplete(data);
   const strongPerformance = complete && (input.monthlyLeadGoal ?? 0) >= 100;
+  const primaryDiagnosisCategory = complete ? (strongPerformance ? "recent-proof" : "trust") : null;
+  const supportingDiagnosisCategories = complete
+    ? strongPerformance
+      ? (["reviews", "project-proof"] as const)
+      : (["reviews", "recent-proof", "project-proof"] as const)
+    : [];
+  const recommendedOfferSlug = primaryDiagnosisCategory
+    ? getOfferRecommendation({
+        primaryDiagnosisCategory,
+        supportingDiagnosisCategories: [...supportingDiagnosisCategories],
+      })?.slug ?? null
+    : null;
   const categories = [
     category(
       "gbp",
@@ -102,6 +115,8 @@ export function scoreAssessment(input: AssessmentInput): AssessmentResult {
       : complete
       ? "The main opportunity is turning existing visibility into clearer homeowner confidence. The business has enough presence to be found, but the evidence trail from profile to local page to call action is uneven."
       : null,
+    primaryDiagnosisCategory,
+    supportingDiagnosisCategories: [...supportingDiagnosisCategories],
     strengthSummary: strongPerformance
       ? "The supplied profile, website, and lead-goal signals support a confident assessment and a narrower improvement plan."
       : complete
@@ -206,6 +221,7 @@ export function scoreAssessment(input: AssessmentInput): AssessmentResult {
       : complete
       ? "Review the Google profile and top local service page together, then fix the proof gaps that would most likely affect call confidence."
       : "Supply the missing website, Google profile, or lead-goal details before relying on recommendations.",
+    recommendedOfferSlug,
     ctaActionId: complete ? "book-consultation" : "request-assessment-review",
   };
 }
