@@ -1,0 +1,10 @@
+Review and Proof Tracker,Version 1.0
+
+Instructions
+"Use one row per eligible completed job. Store a customer or project reference, not unnecessary private details."
+"Status choices: Not eligible, Ready to request, Requested, Reminder due, Review received, Proof published, Paused - service issue."
+Example rows below are clearly marked and should be replaced before live use.
+
+Customer or project reference,Trade or service,General service location,Job completion date,Review request eligibility,Request date,Request channel,Reminder date,Review received,Review date,Response completed,Before photos collected,After photos collected,Permission confirmed,Google profile publication date,Website publication date,Social publication date,Responsible team member,Status,Notes
+EXAMPLE - Job 1042,HVAC install,Raleigh,2026-07-01,Eligible,2026-07-02,SMS,2026-07-09,No,,No,Yes,Yes,Yes,,,,Office Manager,Requested,Example row - replace before use
+EXAMPLE - Job 1043,Plumbing repair,Cary,2026-07-03,Paused - service issue,,,,No,,No,No,Yes,No,,,,Owner,Paused - service issue,Example row - callback open

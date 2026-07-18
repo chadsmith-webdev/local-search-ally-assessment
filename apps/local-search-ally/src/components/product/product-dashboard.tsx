@@ -15,9 +15,15 @@ function statusTone(status: ProductResource["status"]) {
   return "neutral";
 }
 
-function moduleHref(tokenValue: string, moduleId: string) {
+function moduleHref(tokenValue: string, moduleId: string, completedModuleIds: string[]) {
   const params = new URLSearchParams({ token: tokenValue, module: moduleId });
+  if (completedModuleIds.length) params.set("completed", completedModuleIds.join(","));
   return `?${params.toString()}`;
+}
+
+function resourceHref(tokenValue: string, resourceId: string) {
+  const params = new URLSearchParams({ token: tokenValue });
+  return `/products/contractor-review-proof-system/resources/${resourceId}?${params.toString()}`;
 }
 
 function neighboringModules(modules: ProductModule[], currentModule: ProductModule) {
@@ -26,6 +32,11 @@ function neighboringModules(modules: ProductModule[], currentModule: ProductModu
     previous: index > 0 ? modules[index - 1] : null,
     next: index >= 0 && index < modules.length - 1 ? modules[index + 1] : null,
   };
+}
+
+function completionHref(tokenValue: string, moduleId: string, completedModuleIds: string[]) {
+  const completed = Array.from(new Set([...completedModuleIds, moduleId]));
+  return moduleHref(tokenValue, moduleId, completed);
 }
 
 export function ProductAccessState({
@@ -52,7 +63,7 @@ export function ProductAccessState({
           <h1 className="font-display text-3xl font-semibold leading-tight">{title}</h1>
           <p className="mt-3 max-w-2xl leading-7 text-text-secondary">{message}</p>
           <p className="mt-4 text-sm leading-6 text-text-tertiary">
-            Product access is granted only after a verified entitlement. Phase 2 uses a development-only fixture for testing
+            Product access is granted only after a verified entitlement. Phase 3 uses a development-only fixture for testing
             the protected experience.
           </p>
           <Button asChild className="mt-6" variant="secondary">
@@ -75,8 +86,8 @@ export function ProductUnderDevelopmentNotice() {
         <div>
           <p className="font-semibold text-foreground">Development access fixture</p>
           <p className="mt-1 text-sm leading-6 text-text-secondary">
-            This page is protected, but the current access comes from a development fixture. It does not prove payment,
-            and unfinished resources remain unavailable.
+            This page is protected, but the current access comes from a development fixture. It does not prove payment.
+            The offer and product remain non-public until checkout, fulfillment, and purchase verification are complete.
           </p>
         </div>
       </div>
@@ -84,7 +95,7 @@ export function ProductUnderDevelopmentNotice() {
   );
 }
 
-function ResourceList({ resources }: { resources: ProductResource[] }) {
+function ResourceList({ resources, tokenValue }: { resources: ProductResource[]; tokenValue: string }) {
   if (!resources.length) {
     return (
       <Card className="bg-surface-2">
@@ -113,7 +124,7 @@ function ResourceList({ resources }: { resources: ProductResource[] }) {
             </div>
             {resource.downloadAvailable && resource.storageReference ? (
               <Button asChild variant="secondary">
-                <a href={resource.storageReference}>
+                <a href={resourceHref(tokenValue, resource.id)}>
                   <Download className="h-4 w-4" aria-hidden />
                   Download
                 </a>
@@ -199,7 +210,7 @@ export function ProductDashboard({
                                 ? "border-border-accent bg-carolina-dim text-foreground"
                                 : "border-border bg-surface-2 text-text-secondary hover:border-border-accent hover:text-foreground"
                             }`}
-                            href={moduleHref(tokenValue, module.id)}
+                            href={moduleHref(tokenValue, module.id, progress.completedModuleIds)}
                           >
                             {isComplete ? (
                               <CheckCircle2 className="h-4 w-4 shrink-0 text-status-green" aria-hidden />
@@ -227,15 +238,56 @@ export function ProductDashboard({
                   </div>
                   <h2 className="font-display text-3xl font-semibold leading-tight">{currentModule.title}</h2>
                   <p className="mt-3 max-w-3xl leading-7 text-text-secondary">{currentModule.purpose}</p>
-                  <div className="mt-5 rounded-card border border-border bg-surface-2 p-4">
-                    <p className="text-sm font-semibold uppercase tracking-[0.08em] text-text-tertiary">Outcome</p>
-                    <p className="mt-2 leading-7 text-foreground">{currentModule.outcome}</p>
-                  </div>
+                  <Grid className="mt-5 grid-cols-1 md:grid-cols-2">
+                    <div className="rounded-card border border-border bg-surface-2 p-4">
+                      <p className="text-sm font-semibold uppercase tracking-[0.08em] text-text-tertiary">Outcome</p>
+                      <p className="mt-2 leading-7 text-foreground">{currentModule.outcome}</p>
+                    </div>
+                    <div className="rounded-card border border-border bg-surface-2 p-4">
+                      <p className="text-sm font-semibold uppercase tracking-[0.08em] text-text-tertiary">Effort</p>
+                      <p className="mt-2 leading-7 text-foreground">{currentModule.estimatedEffort}</p>
+                    </div>
+                  </Grid>
                 </Card>
               </Section>
 
               <Section className="py-0">
-                <h2 className="mb-4 font-display text-2xl font-semibold">Implementation Content</h2>
+                <h2 className="mb-4 font-display text-2xl font-semibold">Preparation</h2>
+                <Card className="bg-surface-2">
+                  <ul className="grid gap-2">
+                    {currentModule.preparation.map((item) => (
+                      <li key={item} className="flex gap-2 text-sm leading-6 text-text-secondary">
+                        <Circle className="mt-1 h-4 w-4 shrink-0 text-carolina" aria-hidden />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              </Section>
+
+              <Section className="py-0">
+                <h2 className="mb-4 font-display text-2xl font-semibold">Implementation Steps</h2>
+                <Grid className="grid-cols-1">
+                  {currentModule.steps.map((step, index) => (
+                    <Card key={step} className="bg-surface-2">
+                      <div className="flex gap-3">
+                        <Badge tone="accent">{index + 1}</Badge>
+                        <p className="leading-7 text-text-secondary">{step}</p>
+                      </div>
+                    </Card>
+                  ))}
+                </Grid>
+              </Section>
+
+              <Section className="py-0">
+                <h2 className="mb-4 font-display text-2xl font-semibold">Field Example</h2>
+                <Card className="bg-surface-2">
+                  <p className="max-w-3xl leading-7 text-text-secondary">{currentModule.contractorExample}</p>
+                </Card>
+              </Section>
+
+              <Section className="py-0">
+                <h2 className="mb-4 font-display text-2xl font-semibold">Operating Notes</h2>
                 <Grid className="grid-cols-1 md:grid-cols-2">
                   {currentModule.contentSections.map((section) => (
                     <Card key={section} className="bg-surface-2">
@@ -247,14 +299,34 @@ export function ProductDashboard({
 
               <Section className="py-0">
                 <h2 className="mb-4 font-display text-2xl font-semibold">Resources</h2>
-                <ResourceList resources={resources} />
+                <ResourceList resources={resources} tokenValue={tokenValue} />
+              </Section>
+
+              <Section className="py-0">
+                <h2 className="mb-4 font-display text-2xl font-semibold">Completion Checklist</h2>
+                <Card className="bg-surface-2">
+                  <ul className="grid gap-2">
+                    {currentModule.completionChecklist.map((item) => (
+                      <li key={item} className="flex gap-2 text-sm leading-6 text-text-secondary">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-status-green" aria-hidden />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button asChild className="mt-5" variant={completed ? "secondary" : "primary"}>
+                    <a href={completionHref(tokenValue, currentModule.id, progress.completedModuleIds)}>
+                      <CheckCircle2 className="h-4 w-4" aria-hidden />
+                      {completed ? "Module completed" : "Mark module complete"}
+                    </a>
+                  </Button>
+                </Card>
               </Section>
 
               <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap gap-3">
                   {previous ? (
                     <Button asChild variant="secondary">
-                      <a href={moduleHref(tokenValue, previous.id)}>
+                      <a href={moduleHref(tokenValue, previous.id, progress.completedModuleIds)}>
                         <ArrowLeft className="h-4 w-4" aria-hidden />
                         Previous
                       </a>
@@ -262,7 +334,7 @@ export function ProductDashboard({
                   ) : null}
                   {next ? (
                     <Button asChild>
-                      <a href={moduleHref(tokenValue, next.id)}>
+                      <a href={moduleHref(tokenValue, next.id, progress.completedModuleIds)}>
                         Next
                         <ArrowRight className="h-4 w-4" aria-hidden />
                       </a>

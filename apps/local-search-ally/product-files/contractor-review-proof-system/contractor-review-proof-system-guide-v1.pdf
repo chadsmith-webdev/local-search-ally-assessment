@@ -1,0 +1,116 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 3839 >>
+stream
+BT /F1 18 Tf 54 742 Td (Contractor Review and Proof System) Tj ET
+BT /F1 11 Tf 54 724 Td (Core Implementation Guide) Tj ET
+BT /F1 10 Tf 54 711 Td (Version 1.0) Tj ET
+BT /F1 10 Tf 54 698 Td () Tj ET
+BT /F1 14 Tf 54 685 Td (Product Overview) Tj ET
+BT /F1 10 Tf 54 667 Td (The Contractor Review and Proof System helps a home service contractor turn completed) Tj ET
+BT /F1 10 Tf 54 654 Td (work into honest customer feedback and recent project proof. It is an operating process,) Tj ET
+BT /F1 10 Tf 54 641 Td (not a promise of rankings, calls, or a specific number of reviews.) Tj ET
+BT /F1 10 Tf 54 628 Td () Tj ET
+BT /F1 10 Tf 54 615 Td (The process is simple: complete the job, confirm customer readiness, request honest) Tj ET
+BT /F1 10 Tf 54 602 Td (feedback, capture project proof, record the activity, publish appropriate proof, and) Tj ET
+BT /F1 10 Tf 54 589 Td (review weekly performance.) Tj ET
+BT /F1 10 Tf 54 576 Td () Tj ET
+BT /F1 14 Tf 54 563 Td (Why Reviews and Project Proof Work Together) Tj ET
+BT /F1 10 Tf 54 545 Td (Reviews help homeowners understand customer experience. Project proof helps them see) Tj ET
+BT /F1 10 Tf 54 532 Td (completed work. Used together, they make the business feel current and active without) Tj ET
+BT /F1 10 Tf 54 519 Td (relying on exaggerated claims.) Tj ET
+BT /F1 10 Tf 54 506 Td () Tj ET
+BT /F1 10 Tf 54 493 Td (A contractor with good work but old reviews or no recent photos can look less active) Tj ET
+BT /F1 10 Tf 54 480 Td (than a competitor. The fix is a routine that captures proof while the job is still) Tj ET
+BT /F1 10 Tf 54 467 Td (fresh.) Tj ET
+BT /F1 10 Tf 54 454 Td () Tj ET
+BT /F1 14 Tf 54 441 Td (Implementation Order) Tj ET
+BT /F1 10 Tf 54 423 Td (Start with the review process worksheet. Customize the scripts only after eligibility,) Tj ET
+BT /F1 10 Tf 54 410 Td (timing, owner, and reminder rules are clear. Then create the direct review link, set the) Tj ET
+BT /F1 10 Tf 54 397 Td (photo routine, publish weekly proof, and track execution.) Tj ET
+BT /F1 10 Tf 54 384 Td () Tj ET
+BT /F1 10 Tf 54 371 Td (Use the 30-day checklist to avoid doing everything at once. The first month should) Tj ET
+BT /F1 10 Tf 54 358 Td (establish the routine, not perfect every asset.) Tj ET
+BT /F1 10 Tf 54 345 Td () Tj ET
+BT /F1 14 Tf 54 332 Td (Review-Process Principles) Tj ET
+BT /F1 10 Tf 54 314 Td (Ask for honest customer feedback. Do not offer rewards for positive reviews, ask only) Tj ET
+BT /F1 10 Tf 54 301 Td (customers expected to leave five stars, or tell customers what to write.) Tj ET
+BT /F1 10 Tf 54 288 Td () Tj ET
+BT /F1 10 Tf 54 275 Td (Pause the request when there is an unresolved complaint, safety concern, billing) Tj ET
+BT /F1 10 Tf 54 262 Td (dispute, or open callback. Handle the issue first.) Tj ET
+BT /F1 10 Tf 54 249 Td () Tj ET
+BT /F1 14 Tf 54 236 Td (Project-Proof Principles) Tj ET
+BT /F1 10 Tf 54 218 Td (Capture before, during, and completed-work photos when safe and appropriate. Avoid) Tj ET
+BT /F1 10 Tf 54 205 Td (private customer information and get permission before publishing project proof.) Tj ET
+BT /F1 10 Tf 54 192 Td () Tj ET
+BT /F1 10 Tf 54 179 Td (Use general service locations such as city or neighborhood only when the customer has) Tj ET
+BT /F1 10 Tf 54 166 Td (agreed and when it does not expose sensitive information.) Tj ET
+BT /F1 10 Tf 54 153 Td () Tj ET
+BT /F1 14 Tf 54 140 Td (Publishing Cadence) Tj ET
+BT /F1 10 Tf 54 122 Td (Set one weekly publishing block. Choose one recent review theme, completed job, project) Tj ET
+BT /F1 10 Tf 54 109 Td (photo set, or proof update. Publish where the content fits the platform and the) Tj ET
+BT /F1 10 Tf 54 96 Td (permission is clear.) Tj ET
+BT /F1 10 Tf 54 83 Td () Tj ET
+BT /F1 10 Tf 54 70 Td (A steady weekly routine is better than a daily posting plan the team will not maintain.) Tj ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 1880 >>
+stream
+BT /F1 10 Tf 54 742 Td () Tj ET
+BT /F1 14 Tf 54 729 Td (Tracking Guidance) Tj ET
+BT /F1 10 Tf 54 711 Td (Track eligibility, request date, request channel, reminder date, review received, photos) Tj ET
+BT /F1 10 Tf 54 698 Td (collected, permission confirmed, publication dates, responsible team member, status, and) Tj ET
+BT /F1 10 Tf 54 685 Td (notes.) Tj ET
+BT /F1 10 Tf 54 672 Td () Tj ET
+BT /F1 10 Tf 54 659 Td (Do not store unnecessary sensitive customer details. Use a customer or project reference) Tj ET
+BT /F1 10 Tf 54 646 Td (that your team understands without putting private information into a marketing tracker.) Tj ET
+BT /F1 10 Tf 54 633 Td () Tj ET
+BT /F1 14 Tf 54 620 Td (Troubleshooting) Tj ET
+BT /F1 10 Tf 54 602 Td (If requests are low, check whether the handoff is missed. If reviews are low, check) Tj ET
+BT /F1 10 Tf 54 589 Td (timing, friction, and reminder use. If publishing is low, check photo collection and) Tj ET
+BT /F1 10 Tf 54 576 Td (permission.) Tj ET
+BT /F1 10 Tf 54 563 Td () Tj ET
+BT /F1 10 Tf 54 550 Td (If a customer gives private praise, thank them and invite honest public feedback. If a) Tj ET
+BT /F1 10 Tf 54 537 Td (customer raises a problem, route it to service recovery before asking for a review.) Tj ET
+BT /F1 10 Tf 54 524 Td () Tj ET
+BT /F1 14 Tf 54 511 Td (Maintenance Routine) Tj ET
+BT /F1 10 Tf 54 493 Td (Every week, review completed jobs, eligible customers, requests made, reviews received,) Tj ET
+BT /F1 10 Tf 54 480 Td (responses completed, photos collected, proof published, bottleneck, and next corrective) Tj ET
+BT /F1 10 Tf 54 467 Td (action.) Tj ET
+BT /F1 10 Tf 54 454 Td () Tj ET
+BT /F1 10 Tf 54 441 Td (Every month, choose the next target: increase request consistency, improve photo) Tj ET
+BT /F1 10 Tf 54 428 Td (capture, publish more recent proof, or tighten review responses.) Tj ET
+BT /F1 10 Tf 54 415 Td () Tj ET
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000127 00000 n 
+0000000197 00000 n 
+0000000323 00000 n 
+0000004214 00000 n 
+0000004340 00000 n 
+trailer << /Size 8 /Root 1 0 R >>
+startxref
+6272
+%%EOF

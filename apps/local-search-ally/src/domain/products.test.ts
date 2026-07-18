@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import {
   contractorReviewProofProduct,
   getDownloadableResources,
@@ -51,14 +53,32 @@ describe("product registry", () => {
     ]);
   });
 
-  it("does not expose incomplete resources as downloads", () => {
-    expect(contractorReviewProofProduct.resources.every((resource) => resource.status === "draft")).toBe(true);
-    expect(getDownloadableResources(contractorReviewProofProduct)).toEqual([]);
+  it("points every complete resource to a real protected file", () => {
+    expect(contractorReviewProofProduct.resources.every((resource) => resource.status === "complete")).toBe(true);
+    expect(getDownloadableResources(contractorReviewProofProduct)).toHaveLength(12);
+
+    for (const resource of contractorReviewProofProduct.resources) {
+      expect(resource.version).toBe("1.0");
+      expect(resource.storageReference).toBeDefined();
+      expect(resource.storageReference).not.toContain("/public/");
+      expect(existsSync(path.join(process.cwd(), resource.storageReference ?? ""))).toBe(true);
+    }
   });
 
-  it("prevents public activation before product resources are complete", () => {
+  it("prevents public activation while product status remains development", () => {
     expect(isProductReadyForPublicAccess(contractorReviewProofProduct)).toBe(false);
     expect(isOfferReadyForPublicCheckout(contractorReviewProofSystem)).toBe(false);
+  });
+
+  it("requires real module implementation content", () => {
+    for (const module of contractorReviewProofProduct.modules) {
+      expect(module.status).toBe("complete");
+      expect(module.purpose).not.toMatch(/placeholder|lorem/i);
+      expect(module.outcome).not.toMatch(/placeholder|lorem/i);
+      expect(module.steps.length).toBeGreaterThanOrEqual(4);
+      expect(module.completionChecklist.length).toBeGreaterThanOrEqual(4);
+      expect(module.estimatedEffort).toMatch(/\d/);
+    }
   });
 
   it("falls back to the first module when a module id is missing or unknown", () => {

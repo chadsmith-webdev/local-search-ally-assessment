@@ -44,10 +44,28 @@ describe("Contractor Review and Proof System route", () => {
     );
   });
 
-  it("does not expose download buttons for draft resources", async () => {
+  it("exposes completed resource downloads only inside valid development access", async () => {
     render(await pageWithParams({ token: developmentProductAccessToken, module: "downloads" }));
 
-    expect(screen.queryByRole("link", { name: /^Download$/i })).not.toBeInTheDocument();
-    expect(screen.getAllByText("Unavailable").length).toBeGreaterThan(0);
+    const downloadLinks = screen.getAllByRole("link", { name: /^Download$/i });
+    expect(downloadLinks).toHaveLength(12);
+    expect(downloadLinks[0]).toHaveAttribute(
+      "href",
+      expect.stringContaining(`/products/contractor-review-proof-system/resources/`),
+    );
+    expect(screen.queryByText("Unavailable")).not.toBeInTheDocument();
+  });
+
+  it("supports URL-based development progress for marking a module complete", async () => {
+    render(
+      await pageWithParams({
+        token: developmentProductAccessToken,
+        module: "track-activity",
+        completed: "track-activity",
+      }),
+    );
+
+    expect(screen.getByRole("link", { name: /Module completed/i })).toBeInTheDocument();
+    expect(screen.getByText("10%")).toBeInTheDocument();
   });
 });

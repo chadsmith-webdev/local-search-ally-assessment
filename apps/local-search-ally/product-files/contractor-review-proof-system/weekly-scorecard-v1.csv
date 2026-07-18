@@ -1,0 +1,16 @@
+Weekly Scorecard,Version 1.0
+Instructions,Enter weekly counts. Calculate rates using the formulas shown in the Calculation column.
+
+Metric,Value,Calculation
+Jobs completed,,Count completed jobs for the week.
+Eligible customers,,Count jobs that meet the eligibility rule.
+Requests made,,Count review requests sent or made in person.
+Request rate,,"Requests made / eligible customers. If eligible customers is 0, show 0%."
+Reviews received,,Count reviews received this week.
+Review conversion rate,,"Reviews received / requests made. If requests made is 0, show 0%."
+Review responses completed,,Count public responses completed.
+Projects photographed,,Count jobs with usable project photos collected.
+Projects published,,Count approved proof updates published.
+Weekly target,,Write the practical target for next week.
+Bottleneck,,"Choose the biggest constraint: handoff, timing, link, photos, permission, publishing, response."
+Next corrective action,,Write one action the responsible team member will take next week.
