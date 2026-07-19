@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
 import { UnavailableState } from "@/components/product/assessment-funnel";
 import { canAccessStep, firstIncompleteStep } from "@/domain/assessment-session";
-import { getAssessmentStore } from "@/lib/assessment-store";
+import { getAssessmentRepository } from "@/lib/assessment-store";
 import { GeneratingClient } from "./GeneratingClient";
 
 type Params = Promise<{ id: string }>;
 
 export default async function GeneratingPage({ params }: { params: Params }) {
   const { id } = await params;
-  const store = getAssessmentStore();
+  const store = getAssessmentRepository();
   const session = await store.findSession(id);
 
   if (!session) {

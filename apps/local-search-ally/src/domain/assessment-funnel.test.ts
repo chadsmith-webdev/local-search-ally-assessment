@@ -12,7 +12,7 @@ import {
   mergeStepAnswers,
 } from "./assessment-session";
 import { generateAssessmentResult } from "@/lib/assessment-generation";
-import { getAssessmentStore } from "@/lib/assessment-store";
+import { getAssessmentRepository } from "@/lib/assessment-store";
 
 const completeStepData = {
   business: {
@@ -86,7 +86,7 @@ function completeSession() {
 
 describe("assessment funnel foundation", () => {
   beforeEach(() => {
-    getAssessmentStore().reset();
+    getAssessmentRepository().reset();
   });
 
   it("creates a draft session and enforces required step order", () => {
@@ -114,7 +114,7 @@ describe("assessment funnel foundation", () => {
   });
 
   it("keeps assessment delivery consent independent from marketing consent", async () => {
-    const store = getAssessmentStore();
+    const store = getAssessmentRepository();
     const session = completeSession();
     const lead: AssessmentLead = {
       id: "lead_test",
@@ -145,7 +145,7 @@ describe("assessment funnel foundation", () => {
   });
 
   it("generates idempotent saved results, access tokens, and development email jobs", async () => {
-    const store = getAssessmentStore();
+    const store = getAssessmentRepository();
     const session = completeSession();
     const lead: AssessmentLead = {
       id: createEntityId("lead", "lead-fixture"),

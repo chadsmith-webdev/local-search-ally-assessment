@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createAssessmentDeliveryConsent, createMarketingConsent } from "@/domain/consent";
 import { createEntityId } from "@/domain/ids";
 import type { AssessmentLead } from "@/domain/leads";
+import type { LeadAssessmentAssociation } from "@/domain/lead-assessments";
 import {
   type AnswerStep,
   type AssessmentSession,
@@ -17,7 +18,7 @@ import {
 import { getOfferRecommendationForResult } from "@/domain/offers";
 import { buildAssessmentInputFromAnswers } from "@/domain/assessment-session";
 import { scoreAssessment } from "@/domain/scoring";
-import { getAssessmentStore } from "@/lib/assessment-store";
+import { getAssessmentRepository } from "@/lib/assessment-store";
 
 function now() {
   return new Date().toISOString();
@@ -32,10 +33,10 @@ function errorRedirect(assessmentId: string, step: string, message: string) {
 }
 
 export async function startAssessmentAction() {
-  const store = getAssessmentStore();
+  const store = getAssessmentRepository();
   const createdAt = now();
   const session = createEmptyAssessmentSession(createEntityId("assessment"), createdAt);
-  await store.saveSession(session);
+  await store.createSession(session);
   await store.recordEvent({
     name: "assessment_started",
     assessmentId: session.id,
@@ -46,7 +47,7 @@ export async function startAssessmentAction() {
 }
 
 export async function saveAssessmentStepAction(assessmentId: string, step: AnswerStep, formData: FormData) {
-  const store = getAssessmentStore();
+  const store = getAssessmentRepository();
   const session = await store.findSession(assessmentId);
   if (!session) redirect("/assessment?error=session-not-found");
 
@@ -85,7 +86,7 @@ export async function saveAssessmentStepAction(assessmentId: string, step: Answe
 }
 
 export async function completeReviewAction(assessmentId: string) {
-  const store = getAssessmentStore();
+  const store = getAssessmentRepository();
   const session = await store.findSession(assessmentId);
   if (!session) redirect("/assessment?error=session-not-found");
   const incomplete = firstIncompleteStep(session.answers);
@@ -108,7 +109,7 @@ export async function completeReviewAction(assessmentId: string) {
 }
 
 export async function captureLeadAction(assessmentId: string, formData: FormData) {
-  const store = getAssessmentStore();
+  const store = getAssessmentRepository();
   const session = await store.findSession(assessmentId);
   if (!session) redirect("/assessment?error=session-not-found");
   if (!canAccessStep("contact", session.answers)) {
@@ -157,13 +158,25 @@ export async function captureLeadAction(assessmentId: string, formData: FormData
     updatedAt: submittedAt,
   };
 
-  await store.saveLead(lead);
-  await store.saveSession({
-    ...session,
-    status: "contact-captured",
-    currentStep: "generating",
+  const association: LeadAssessmentAssociation = {
+    id: createEntityId("event", `lead-assessment-${lead.id}-${assessmentId}`),
     leadId: lead.id,
+    assessmentId,
+    source: "assessment-results-gate",
+    createdAt: submittedAt,
     updatedAt: submittedAt,
+  };
+
+  await store.transaction(async (transaction) => {
+    await transaction.saveLead(lead);
+    await transaction.associateLeadWithAssessment(association);
+    await transaction.saveSession({
+      ...session,
+      status: "contact-captured",
+      currentStep: "generating",
+      leadId: lead.id,
+      updatedAt: submittedAt,
+    });
   });
   await store.recordEvent({
     name: "email_capture_submitted",

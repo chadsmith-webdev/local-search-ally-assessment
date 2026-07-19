@@ -6,7 +6,8 @@ import { buildAssessmentInputFromAnswers, firstIncompleteStep } from "@/domain/a
 import type { SavedAssessmentResult } from "@/domain/results";
 import { scoreAssessment } from "@/domain/scoring";
 import { composeAssessmentOpenUI } from "@/openui/compose";
-import { getAssessmentStore } from "./assessment-store";
+import type { AssessmentRepository, ResultAccessCreation } from "./assessment-repository";
+import { getAssessmentRepository } from "./assessment-store";
 
 export type GenerationResult =
   | {
@@ -74,22 +75,21 @@ function attemptServerSafeOpenUICorrection(response: string) {
 }
 
 async function queueResultEmail({
+  store,
   session,
   lead,
   result,
-  secureResultUrl,
+  access,
   now,
 }: {
+  store: AssessmentRepository;
   session: AssessmentSession;
   lead: AssessmentLead;
   result: SavedAssessmentResult;
-  secureResultUrl: string;
+  access: ResultAccessCreation;
   now: string;
 }) {
-  const store = getAssessmentStore();
   const idempotencyKey = `result-email:${result.id}`;
-  const existing = await store.findEmailJobByIdempotencyKey(idempotencyKey);
-  if (existing) return existing;
 
   const job: ResultEmailJob = {
     id: createEntityId("event"),
@@ -97,18 +97,20 @@ async function queueResultEmail({
     assessmentId: session.id,
     resultId: result.id,
     recipientEmail: lead.email,
-    secureResultUrl,
+    resultUrlPath: `/results/${result.id}`,
+    resultAccessTokenId: access.token.id,
     resultCategory: result.result.primaryDiagnosisCategory,
     recommendedOfferSlug: result.result.recommendedOfferSlug,
     assessmentDeliveryConsent: lead.assessmentDeliveryConsent,
     marketingConsent: lead.marketingConsent,
     idempotencyKey,
     status: "development-unsent",
+    attemptCount: 0,
     createdAt: now,
     updatedAt: now,
   };
 
-  await store.saveEmailJob(job);
+  const queued = await store.queueResultEmailOnce(job);
   await store.recordEvent({
     name: "result_email_queued",
     assessmentId: session.id,
@@ -118,7 +120,7 @@ async function queueResultEmail({
     idempotencyKey,
     occurredAt: now,
   });
-  return job;
+  return queued;
 }
 
 export async function generateAssessmentResult({
@@ -130,7 +132,7 @@ export async function generateAssessmentResult({
   origin?: string;
   now?: string;
 }): Promise<GenerationResult> {
-  const store = getAssessmentStore();
+  const store = getAssessmentRepository();
   const session = await store.findSession(assessmentId);
 
   if (!session) {
@@ -195,51 +197,54 @@ export async function generateAssessmentResult({
       updatedAt: now,
     };
 
-    await store.saveResult(savedResult);
-    const access = await store.createResultAccess(savedResult, now);
-    const resultUrl = resultUrlFor(savedResult.id, access.tokenValue, origin);
-    await queueResultEmail({ session, lead, result: savedResult, secureResultUrl: resultUrl, now });
-    if (rendererMode === "deterministic-fallback") {
-      await store.recordEvent({
-        name: "deterministic_fallback_used",
+    const { persistedResult, access } = await store.transaction(async (transaction) => {
+      const persistedResult = await transaction.createResultOnce(savedResult);
+      const access = await transaction.createResultAccess(persistedResult, now);
+      await queueResultEmail({ store: transaction, session, lead, result: persistedResult, access, now });
+      if (rendererMode === "deterministic-fallback") {
+        await transaction.recordEvent({
+          name: "deterministic_fallback_used",
+          assessmentId,
+          leadId: lead.id,
+          resultId: persistedResult.id,
+          idempotencyKey: `deterministic-fallback:${persistedResult.id}`,
+          occurredAt: now,
+        });
+      }
+      await transaction.recordEvent({
+        name: "result_access_created",
         assessmentId,
         leadId: lead.id,
-        resultId: savedResult.id,
-        idempotencyKey: `deterministic-fallback:${savedResult.id}`,
+        resultId: persistedResult.id,
+        idempotencyKey: `result-access:${persistedResult.id}`,
         occurredAt: now,
       });
-    }
-    await store.recordEvent({
-      name: "result_access_created",
-      assessmentId,
-      leadId: lead.id,
-      resultId: savedResult.id,
-      idempotencyKey: `result-access:${savedResult.id}`,
-      occurredAt: now,
+      await transaction.recordEvent({
+        name: "assessment_generation_completed",
+        assessmentId,
+        leadId: lead.id,
+        resultId: persistedResult.id,
+        offerSlug: scoredResult.recommendedOfferSlug,
+        idempotencyKey: `generation-completed:${assessmentId}`,
+        occurredAt: now,
+      });
+      await transaction.saveSession({
+        ...session,
+        status: "completed",
+        currentStep: "completed",
+        leadId: lead.id,
+        resultId: persistedResult.id,
+        updatedAt: now,
+        completedAt: now,
+        generationError: undefined,
+      });
+      return { persistedResult, access };
     });
-    await store.recordEvent({
-      name: "assessment_generation_completed",
-      assessmentId,
-      leadId: lead.id,
-      resultId: savedResult.id,
-      offerSlug: scoredResult.recommendedOfferSlug,
-      idempotencyKey: `generation-completed:${assessmentId}`,
-      occurredAt: now,
-    });
-    await store.saveSession({
-      ...session,
-      status: "completed",
-      currentStep: "completed",
-      leadId: lead.id,
-      resultId: savedResult.id,
-      updatedAt: now,
-      completedAt: now,
-      generationError: undefined,
-    });
+    const resultUrl = resultUrlFor(persistedResult.id, access.tokenValue, origin);
 
     return {
       status: "completed",
-      result: savedResult,
+      result: persistedResult,
       tokenValue: access.tokenValue,
       resultUrl,
     };

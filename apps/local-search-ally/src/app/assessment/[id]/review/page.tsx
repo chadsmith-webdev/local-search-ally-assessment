@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
 import { ReviewAnswers, UnavailableState } from "@/components/product/assessment-funnel";
 import { canAccessStep, firstIncompleteStep } from "@/domain/assessment-session";
-import { getAssessmentStore } from "@/lib/assessment-store";
+import { getAssessmentRepository } from "@/lib/assessment-store";
 import { completeReviewAction } from "../../actions";
 
 type Params = Promise<{ id: string }>;
 
 export default async function ReviewPage({ params }: { params: Params }) {
   const { id } = await params;
-  const store = getAssessmentStore();
+  const store = getAssessmentRepository();
   const session = await store.findSession(id);
 
   if (!session) {

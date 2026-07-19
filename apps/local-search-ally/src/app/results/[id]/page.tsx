@@ -3,7 +3,7 @@ import { DeterministicAssessmentFallback } from "@/components/product/assessment
 import { UnavailableState } from "@/components/product/assessment-funnel";
 import { validateResultAccessToken } from "@/domain/result-access";
 import { getPublicResultsPageOffer } from "@/domain/offers";
-import { getAssessmentStore } from "@/lib/assessment-store";
+import { getAssessmentRepository } from "@/lib/assessment-store";
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -16,7 +16,7 @@ export default async function ResultPage({ params, searchParams }: { params: Par
   const { id } = await params;
   const query = await searchParams;
   const tokenValue = firstParam(query.token);
-  const store = getAssessmentStore();
+  const store = getAssessmentRepository();
   const saved = await store.findResult(id);
 
   if (!saved) {

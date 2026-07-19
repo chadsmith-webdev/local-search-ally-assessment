@@ -4,7 +4,7 @@ import type { AssessmentLead } from "@/domain/leads";
 import { hashResultAccessToken, type ResultAccessToken } from "@/domain/result-access";
 import { createEmptyAssessmentSession, mergeStepAnswers } from "@/domain/assessment-session";
 import { type SavedAssessmentResult } from "@/domain/results";
-import { getAssessmentStore } from "@/lib/assessment-store";
+import { getAssessmentRepository } from "@/lib/assessment-store";
 import { generateAssessmentResult } from "@/lib/assessment-generation";
 
 const now = "2026-07-18T12:00:00.000Z";
@@ -97,7 +97,7 @@ function fixtureLead(assessmentId: string): AssessmentLead {
 }
 
 export async function createDevelopmentAssessmentFunnelFixtures(origin = "http://localhost:3010") {
-  const store = getAssessmentStore();
+  const store = getAssessmentRepository();
 
   const partial = createEmptyAssessmentSession("assessment_dev_partial", now);
   await store.saveSession(mergeStepAnswers(partial, "business", developmentFunnelAnswers.business, now));
@@ -168,7 +168,7 @@ export async function createDevelopmentAssessmentFunnelFixtures(origin = "http:/
       createdAt: now,
       expiresAt: now,
     };
-    await store.saveResultAccessToken(expiredToken, expiredTokenValue);
+    await store.saveResultAccessToken(expiredToken);
 
     const emailFailedResult: SavedAssessmentResult = {
       ...generated.result,

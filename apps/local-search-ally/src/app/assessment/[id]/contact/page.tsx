@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { ContactCapture, UnavailableState } from "@/components/product/assessment-funnel";
 import { canAccessStep, firstIncompleteStep } from "@/domain/assessment-session";
-import { getAssessmentStore } from "@/lib/assessment-store";
+import { getAssessmentRepository } from "@/lib/assessment-store";
 import { captureLeadAction } from "../../actions";
 
 type Params = Promise<{ id: string }>;
@@ -14,7 +14,7 @@ function firstParam(value: string | string[] | undefined) {
 export default async function ContactPage({ params, searchParams }: { params: Params; searchParams: SearchParams }) {
   const { id } = await params;
   const query = await searchParams;
-  const store = getAssessmentStore();
+  const store = getAssessmentRepository();
   const session = await store.findSession(id);
 
   if (!session) {

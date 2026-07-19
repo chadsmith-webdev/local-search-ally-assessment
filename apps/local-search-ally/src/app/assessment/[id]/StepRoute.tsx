@@ -13,7 +13,7 @@ import {
   canAccessStep,
   firstIncompleteStep,
 } from "@/domain/assessment-session";
-import { getAssessmentStore } from "@/lib/assessment-store";
+import { getAssessmentRepository } from "@/lib/assessment-store";
 import { saveAssessmentStepAction } from "../actions";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -31,7 +31,7 @@ export async function StepRoute({
   step: AnswerStep;
   searchParams: SearchParams;
 }) {
-  const store = getAssessmentStore();
+  const store = getAssessmentRepository();
   const session = await store.findSession(assessmentId);
   const params = await searchParams;
 

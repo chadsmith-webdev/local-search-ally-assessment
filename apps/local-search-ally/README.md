@@ -28,6 +28,18 @@ npm run build
 
 `npm run build` generates `src/openui/generated-system-prompt.txt` from the OpenUI library before building.
 
+## Persistence
+
+Assessment persistence is accessed through `src/lib/assessment-repository.ts`. The current runnable adapter is `memory`, which is for development, fixtures, and tests only.
+
+```bash
+ASSESSMENT_STORE_ADAPTER=memory npm run dev
+```
+
+Production must not use memory persistence. With `NODE_ENV=production`, missing `ASSESSMENT_STORE_ADAPTER` or `ASSESSMENT_STORE_ADAPTER=memory` fails safely. The `database` adapter boundary and provider-neutral schema are documented in `docs/persistence.md` and `persistence/schema.sql`, but the real database adapter and migration runner are not implemented yet.
+
+Checkout, payment events, purchase confirmation, product fulfillment unlocks, and real email delivery remain blocked external integrations.
+
 ## Folder Structure
 
 ```text
@@ -40,6 +52,8 @@ src/components/rendering
 src/domain              Input, data collection, verification, scoring, and normalized result schemas
 src/fixtures            Assessment and viewport fixtures
 src/openui              OpenUI definitions, examples, prompt options, validation, and composition
+docs/persistence.md     Persistence adapter, transaction, privacy, and production-startup notes
+persistence/schema.sql  Provider-neutral production schema draft
 scripts                 Prompt-generation entrypoint
 ```
 
