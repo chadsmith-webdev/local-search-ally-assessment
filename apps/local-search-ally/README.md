@@ -30,13 +30,22 @@ npm run build
 
 ## Persistence
 
-Assessment persistence is accessed through `src/lib/assessment-repository.ts`. The current runnable adapter is `memory`, which is for development, fixtures, and tests only.
+Assessment persistence is accessed through `src/lib/assessment-repository.ts`. The available adapters are `memory` and `postgres`.
 
 ```bash
 ASSESSMENT_STORE_ADAPTER=memory npm run dev
 ```
 
-Production must not use memory persistence. With `NODE_ENV=production`, missing `ASSESSMENT_STORE_ADAPTER` or `ASSESSMENT_STORE_ADAPTER=memory` fails safely. The `database` adapter boundary and provider-neutral schema are documented in `docs/persistence.md` and `persistence/schema.sql`, but the real database adapter and migration runner are not implemented yet.
+`memory` is explicit development/test storage only. For Supabase Postgres:
+
+```bash
+ASSESSMENT_STORE_ADAPTER=postgres
+DATABASE_URL=postgres://...
+npm run db:migrate
+npm run dev
+```
+
+Production must use `ASSESSMENT_STORE_ADAPTER=postgres` and `DATABASE_URL`; it never falls back to memory. Migration and integration-test details are documented in `docs/persistence.md`.
 
 Checkout, payment events, purchase confirmation, product fulfillment unlocks, and real email delivery remain blocked external integrations.
 
@@ -53,7 +62,8 @@ src/domain              Input, data collection, verification, scoring, and norma
 src/fixtures            Assessment and viewport fixtures
 src/openui              OpenUI definitions, examples, prompt options, validation, and composition
 docs/persistence.md     Persistence adapter, transaction, privacy, and production-startup notes
-persistence/schema.sql  Provider-neutral production schema draft
+persistence/schema.sql  Supabase Postgres schema reference
+persistence/migrations  Executable SQL migrations
 scripts                 Prompt-generation entrypoint
 ```
 

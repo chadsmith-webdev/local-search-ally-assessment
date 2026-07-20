@@ -206,9 +206,7 @@ describe("assessment persistence boundary", () => {
     expect(() => resolveAssessmentStoreAdapter({ adapter: "memory", nodeEnv: "production" })).toThrow(
       /memory assessment store is development-only/i,
     );
-    expect(() => resolveAssessmentStoreAdapter({ adapter: undefined, nodeEnv: "production" })).toThrow(
-      /must be configured for production/i,
-    );
-    expect(resolveAssessmentStoreAdapter({ adapter: "database", nodeEnv: "production" })).toBe("database");
+    expect(() => resolveAssessmentStoreAdapter({ adapter: undefined, nodeEnv: "production" })).toThrow(/must be configured/i);
+    expect(resolveAssessmentStoreAdapter({ adapter: "postgres", nodeEnv: "production" })).toBe("postgres");
   });
 });

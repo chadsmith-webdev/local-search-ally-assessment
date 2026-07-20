@@ -158,37 +158,37 @@ export async function captureLeadAction(assessmentId: string, formData: FormData
     updatedAt: submittedAt,
   };
 
-  const association: LeadAssessmentAssociation = {
-    id: createEntityId("event", `lead-assessment-${lead.id}-${assessmentId}`),
-    leadId: lead.id,
-    assessmentId,
-    source: "assessment-results-gate",
-    createdAt: submittedAt,
-    updatedAt: submittedAt,
-  };
-
-  await store.transaction(async (transaction) => {
-    await transaction.saveLead(lead);
+  const savedLead = await store.transaction(async (transaction) => {
+    const persistedLead = await transaction.saveLead(lead);
+    const association: LeadAssessmentAssociation = {
+      id: createEntityId("event", `lead-assessment-${persistedLead.id}-${assessmentId}`),
+      leadId: persistedLead.id,
+      assessmentId,
+      source: "assessment-results-gate",
+      createdAt: submittedAt,
+      updatedAt: submittedAt,
+    };
     await transaction.associateLeadWithAssessment(association);
     await transaction.saveSession({
       ...session,
       status: "contact-captured",
       currentStep: "generating",
-      leadId: lead.id,
+      leadId: persistedLead.id,
       updatedAt: submittedAt,
     });
+    return persistedLead;
   });
   await store.recordEvent({
     name: "email_capture_submitted",
     assessmentId,
-    leadId: lead.id,
+    leadId: savedLead.id,
     idempotencyKey: `email-capture-submitted:${assessmentId}`,
     occurredAt: submittedAt,
   });
   await store.recordEvent({
     name: marketingConsentGranted ? "marketing_consent_granted" : "marketing_consent_declined",
     assessmentId,
-    leadId: lead.id,
+    leadId: savedLead.id,
     idempotencyKey: `marketing-consent:${assessmentId}`,
     occurredAt: submittedAt,
   });

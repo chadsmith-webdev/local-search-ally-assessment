@@ -13,6 +13,7 @@ import {
   normalizeLeadEmail,
   resolveAssessmentStoreAdapter,
 } from "./assessment-repository";
+import { createPostgresAssessmentRepository } from "./postgres-assessment-repository";
 
 interface AssessmentStoreState {
   sessions: Map<string, AssessmentSession>;
@@ -34,7 +35,9 @@ interface AssessmentStoreState {
 const globalStore = globalThis as typeof globalThis & {
   __localSearchAllyAssessmentStore?: AssessmentStoreState;
   __localSearchAllyAssessmentRepository?: AssessmentRepository;
+  __localSearchAllyPostgresAssessmentRepository?: AssessmentRepository;
   __localSearchAllyAssessmentMemoryWarningShown?: boolean;
+  __localSearchAllyAssessmentPostgresLogShown?: boolean;
 };
 
 function createState(): AssessmentStoreState {
@@ -310,11 +313,16 @@ export function createMemoryAssessmentRepository(seedState = createState()) {
 
 export function getAssessmentRepository(): AssessmentRepository {
   const adapter = resolveAssessmentStoreAdapter();
-  if (adapter === "database") {
-    throw new AssessmentPersistenceError(
-      "The database assessment repository boundary is defined, but no production adapter has been configured in this phase.",
-      "store-unavailable",
-    );
+  if (adapter === "postgres") {
+    if (!process.env.DATABASE_URL) {
+      throw new AssessmentPersistenceError("DATABASE_URL is required for the postgres assessment store.", "store-unavailable");
+    }
+    if (!globalStore.__localSearchAllyAssessmentPostgresLogShown) {
+      console.info("Local Search Ally assessment persistence adapter: postgres.");
+      globalStore.__localSearchAllyAssessmentPostgresLogShown = true;
+    }
+    globalStore.__localSearchAllyPostgresAssessmentRepository ??= createPostgresAssessmentRepository();
+    return globalStore.__localSearchAllyPostgresAssessmentRepository;
   }
 
   if (process.env.NODE_ENV === "development" && !globalStore.__localSearchAllyAssessmentMemoryWarningShown) {

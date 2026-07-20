@@ -8,9 +8,12 @@
     "build": "npm run generate:prompt && next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/lib/postgres-assessment-repository.integration.test.ts",
     "test:watch": "vitest",
-    "generate:prompt": "node ./scripts/generate-system-prompt.mjs"
+    "test:integration": "vitest run src/lib/postgres-assessment-repository.integration.test.ts",
+    "generate:prompt": "node ./scripts/generate-system-prompt.mjs",
+    "db:migrate": "node ./scripts/db-migrate.mjs",
+    "db:status": "node ./scripts/db-status.mjs"
   },
   "dependencies": {
     "@openuidev/react-lang": "latest",
@@ -21,6 +24,7 @@
     "clsx": "latest",
     "lucide-react": "latest",
     "next": "latest",
+    "pg": "^8.22.0",
     "react": "latest",
     "react-dom": "latest",
     "tailwind-merge": "latest",
@@ -32,6 +36,7 @@
     "@testing-library/jest-dom": "latest",
     "@testing-library/react": "latest",
     "@types/node": "latest",
+    "@types/pg": "^8.20.0",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",

@@ -6,7 +6,7 @@ import type { ResultAccessToken } from "@/domain/result-access";
 import type { ResultEmailJob } from "@/domain/result-email";
 import type { SavedAssessmentResult } from "@/domain/results";
 
-export type AssessmentStoreAdapter = "memory" | "database";
+export type AssessmentStoreAdapter = "memory" | "postgres";
 
 export interface ResultAccessCreation {
   token: ResultAccessToken;
@@ -92,14 +92,14 @@ export function resolveAssessmentStoreAdapter({
   adapter?: string;
   nodeEnv?: string;
 } = {}): AssessmentStoreAdapter {
-  const resolved = adapter?.trim() || (nodeEnv === "production" ? "" : "memory");
+  const resolved = adapter?.trim() || (nodeEnv === "test" ? "memory" : "");
   if (!resolved) {
     throw new AssessmentPersistenceError(
-      "ASSESSMENT_STORE_ADAPTER must be configured for production. Memory persistence is not allowed in production.",
+      "ASSESSMENT_STORE_ADAPTER must be configured. Use memory for isolated tests or postgres for persistent storage.",
       "production-memory-disabled",
     );
   }
-  if (resolved !== "memory" && resolved !== "database") {
+  if (resolved !== "memory" && resolved !== "postgres") {
     throw new AssessmentPersistenceError(`Unsupported ASSESSMENT_STORE_ADAPTER value: ${resolved}.`, "store-unavailable");
   }
   if (nodeEnv === "production" && resolved === "memory") {
@@ -107,6 +107,9 @@ export function resolveAssessmentStoreAdapter({
       "The memory assessment store is development-only and cannot be used in production.",
       "production-memory-disabled",
     );
+  }
+  if (nodeEnv === "production" && resolved !== "postgres") {
+    throw new AssessmentPersistenceError("Production assessment persistence must use the postgres adapter.", "store-unavailable");
   }
   return resolved;
 }

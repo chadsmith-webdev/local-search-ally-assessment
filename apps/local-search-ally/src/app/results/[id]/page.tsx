@@ -34,13 +34,18 @@ export default async function ResultPage({ params, searchParams }: { params: Par
     return <UnavailableState title="Secure access required" message={access.message} />;
   }
 
+  const viewedAt = new Date().toISOString();
+  await store.saveResultAccessToken({
+    ...access.token,
+    lastUsedAt: viewedAt,
+  });
   await store.recordEvent({
     name: "results_viewed",
     assessmentId: saved.assessmentId,
     leadId: saved.leadId,
     resultId: saved.id,
     idempotencyKey: `results-viewed:${saved.id}`,
-    occurredAt: new Date().toISOString(),
+    occurredAt: viewedAt,
   });
 
   const publicOffer = getPublicResultsPageOffer(saved.result);
@@ -52,7 +57,7 @@ export default async function ResultPage({ params, searchParams }: { params: Par
       resultId: saved.id,
       offerSlug: publicOffer.slug,
       idempotencyKey: `low-ticket-offer-viewed:${saved.id}:${publicOffer.slug}`,
-      occurredAt: new Date().toISOString(),
+      occurredAt: viewedAt,
     });
   }
 
