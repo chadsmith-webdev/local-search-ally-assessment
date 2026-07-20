@@ -76,7 +76,18 @@ export class PayPalRestClient implements PayPalClient {
         ...(init.headers ?? {}),
       },
     });
-    if (!response.ok) throw new Error(`PayPal request failed with status ${response.status}.`);
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as {
+        name?: string;
+        details?: Array<{ issue?: string; field?: string }>;
+      } | null;
+      const issues = body?.details
+        ?.map((detail) => [detail.issue, detail.field].filter(Boolean).join(" at "))
+        .filter(Boolean)
+        .join("; ");
+      const label = [body?.name, issues].filter(Boolean).join(": ");
+      throw new Error(`PayPal request failed with status ${response.status}${label ? ` (${label})` : ""}.`);
+    }
     return (await response.json()) as T;
   }
 

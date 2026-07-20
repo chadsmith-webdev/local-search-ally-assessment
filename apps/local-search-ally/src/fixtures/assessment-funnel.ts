@@ -96,16 +96,17 @@ function fixtureLead(assessmentId: string): AssessmentLead {
   };
 }
 
-export async function createDevelopmentAssessmentFunnelFixtures(origin = "http://localhost:3010") {
+export async function createDevelopmentAssessmentFunnelFixtures(origin = "http://localhost:3010", namespace = "") {
   const store = getAssessmentRepository();
+  const scoped = (id: string) => (namespace ? `${id}_${namespace}` : id);
 
-  const partial = createEmptyAssessmentSession("assessment_dev_partial", now);
+  const partial = createEmptyAssessmentSession(scoped("assessment_dev_partial"), now);
   await store.saveSession(mergeStepAnswers(partial, "business", developmentFunnelAnswers.business, now));
 
-  const complete = completeFixtureSession("assessment_dev_complete");
+  const complete = completeFixtureSession(scoped("assessment_dev_complete"));
   await store.saveSession({ ...complete, currentStep: "review" });
 
-  const weak = completeFixtureSession("assessment_dev_weak_economics");
+  const weak = completeFixtureSession(scoped("assessment_dev_weak_economics"));
   await store.saveSession({
     ...weak,
     currentStep: "review",
@@ -119,15 +120,15 @@ export async function createDevelopmentAssessmentFunnelFixtures(origin = "http:/
     },
   });
 
-  const contact = completeFixtureSession("assessment_dev_contact");
+  const contact = completeFixtureSession(scoped("assessment_dev_contact"));
   await store.saveSession({ ...contact, status: "reviewed", currentStep: "contact" });
 
-  const generating = completeFixtureSession("assessment_dev_generating");
+  const generating = completeFixtureSession(scoped("assessment_dev_generating"));
   const generatingLead = fixtureLead(generating.id);
   await store.saveLead(generatingLead);
   await store.saveSession({ ...generating, status: "contact-captured", currentStep: "generating", leadId: generatingLead.id });
 
-  const failed = completeFixtureSession("assessment_dev_generation_failed");
+  const failed = completeFixtureSession(scoped("assessment_dev_generation_failed"));
   const failedLead = fixtureLead(failed.id);
   await store.saveLead(failedLead);
   await store.saveSession({
@@ -146,22 +147,22 @@ export async function createDevelopmentAssessmentFunnelFixtures(origin = "http:/
 
   const fixtureLinks = [
     { label: "New assessment", href: "/assessment" },
-    { label: "Partially completed assessment", href: "/assessment/assessment_dev_partial/market" },
-    { label: "Review screen with complete inputs", href: "/assessment/assessment_dev_complete/review" },
-    { label: "Review screen with weak economics inputs", href: "/assessment/assessment_dev_weak_economics/review" },
-    { label: "Email-capture default state", href: "/assessment/assessment_dev_contact/contact" },
-    { label: "Email-capture validation error", href: "/assessment/assessment_dev_contact/contact?error=invalid-email" },
-    { label: "Generating state", href: "/assessment/assessment_dev_generating/generating" },
-    { label: "Generation failure state", href: "/assessment/assessment_dev_generation_failed/generating" },
+    { label: "Partially completed assessment", href: `/assessment/${scoped("assessment_dev_partial")}/market` },
+    { label: "Review screen with complete inputs", href: `/assessment/${scoped("assessment_dev_complete")}/review` },
+    { label: "Review screen with weak economics inputs", href: `/assessment/${scoped("assessment_dev_weak_economics")}/review` },
+    { label: "Email-capture default state", href: `/assessment/${scoped("assessment_dev_contact")}/contact` },
+    { label: "Email-capture validation error", href: `/assessment/${scoped("assessment_dev_contact")}/contact?error=invalid-email` },
+    { label: "Generating state", href: `/assessment/${scoped("assessment_dev_generating")}/generating` },
+    { label: "Generation failure state", href: `/assessment/${scoped("assessment_dev_generation_failed")}/generating` },
   ];
 
   if (generated.status === "completed") {
     const generatedResultUrl = new URL(generated.resultUrl);
     const generatedResultToken = generatedResultUrl.searchParams.get("token") ?? generated.tokenValue;
     const invalidTokenHref = `/results/${generated.result.id}?token=invalid`;
-    const expiredTokenValue = "rat_dev_expired_fixture";
+    const expiredTokenValue = scoped("rat_dev_expired_fixture");
     const expiredToken: ResultAccessToken = {
-      id: "access_dev_expired_result",
+      id: scoped("access_dev_expired_result"),
       resultId: generated.result.id,
       assessmentId: generated.result.assessmentId,
       leadId: generated.result.leadId,
@@ -172,24 +173,6 @@ export async function createDevelopmentAssessmentFunnelFixtures(origin = "http:/
     };
     await store.saveResultAccessToken(expiredToken);
 
-    const emailFailedResult: SavedAssessmentResult = {
-      ...generated.result,
-      id: "result_dev_email_failed",
-      resultEmailDeliveryStatus: "failed",
-    };
-    await store.saveResult(emailFailedResult);
-    const emailFailedAccess = await store.createResultAccess(emailFailedResult, now);
-
-    const fallbackResult: SavedAssessmentResult = {
-      ...generated.result,
-      id: "result_dev_fallback",
-      rendererMode: "deterministic-fallback",
-      openUIResponse: undefined,
-      fallbackReason: "Development fixture fallback state.",
-    };
-    await store.saveResult(fallbackResult);
-    const fallbackAccess = await store.createResultAccess(fallbackResult, now);
-
     fixtureLinks.push(
       { label: "Secure result", href: generated.resultUrl.replace(origin, "") },
       {
@@ -198,15 +181,38 @@ export async function createDevelopmentAssessmentFunnelFixtures(origin = "http:/
       },
       { label: "Invalid result token", href: invalidTokenHref },
       { label: "Expired result token", href: `/results/${generated.result.id}?token=${expiredTokenValue}` },
-      {
-        label: "Result-email failure with result still available",
-        href: `/results/${emailFailedResult.id}?token=${emailFailedAccess.tokenValue}`,
-      },
-      {
-        label: "OpenUI failure with deterministic fallback",
-        href: `/results/${fallbackResult.id}?token=${fallbackAccess.tokenValue}`,
-      },
     );
+
+    if (!namespace) {
+      const emailFailedResult: SavedAssessmentResult = {
+        ...generated.result,
+        id: "result_dev_email_failed",
+        resultEmailDeliveryStatus: "failed",
+      };
+      await store.saveResult(emailFailedResult);
+      const emailFailedAccess = await store.createResultAccess(emailFailedResult, now);
+
+      const fallbackResult: SavedAssessmentResult = {
+        ...generated.result,
+        id: "result_dev_fallback",
+        rendererMode: "deterministic-fallback",
+        openUIResponse: undefined,
+        fallbackReason: "Development fixture fallback state.",
+      };
+      await store.saveResult(fallbackResult);
+      const fallbackAccess = await store.createResultAccess(fallbackResult, now);
+
+      fixtureLinks.push(
+        {
+          label: "Result-email failure with result still available",
+          href: `/results/${emailFailedResult.id}?token=${emailFailedAccess.tokenValue}`,
+        },
+        {
+          label: "OpenUI failure with deterministic fallback",
+          href: `/results/${fallbackResult.id}?token=${fallbackAccess.tokenValue}`,
+        },
+      );
+    }
   }
 
   return fixtureLinks;

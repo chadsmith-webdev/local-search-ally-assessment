@@ -206,7 +206,7 @@ describe("PayPal sandbox commerce", () => {
     expect(second.orderId).toBe(first.orderId);
     expect(paypal.createOrder).toHaveBeenCalledTimes(1);
     expect(paypal.createOrder.mock.calls[0][0]).toMatchObject({
-      requestId: expect.stringContaining("paypal-checkout:"),
+      requestId: first.attempt.id,
       body: {
         intent: "CAPTURE",
         purchase_units: [
@@ -258,6 +258,9 @@ describe("PayPal sandbox commerce", () => {
 
     expect(captured.status).toBe("completed");
     expect(repeated.status).toBe("completed");
+    expect(paypal.captureOrder.mock.calls[0][0]).toMatchObject({
+      requestId: `capture_${attempt?.id.replace(/^checkout_/, "")}`,
+    });
     expect(snapshot.purchases).toHaveLength(1);
     expect(snapshot.purchases[0]).toMatchObject({
       paymentProvider: "paypal",

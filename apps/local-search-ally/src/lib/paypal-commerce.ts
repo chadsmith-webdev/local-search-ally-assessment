@@ -43,6 +43,10 @@ function primaryPurchaseUnit(order: PayPalOrder) {
   return order.purchase_units?.[0] ?? null;
 }
 
+function captureRequestId(attemptId: string) {
+  return `capture_${attemptId.replace(/^checkout_/, "")}`;
+}
+
 export async function loadCheckoutEligibility({
   resultId,
   tokenValue,
@@ -127,7 +131,7 @@ export async function createPayPalOrderForResult({
   }
 
   const order = await paypal.createOrder({
-    requestId: attempt.idempotencyKey,
+    requestId: attempt.id,
     body: {
       intent: "CAPTURE",
       purchase_units: [
@@ -336,7 +340,7 @@ export async function capturePayPalOrder({
   await repository.saveCheckoutAttempt({ ...attempt, status: "capture-pending", updatedAt: now });
   const order = await paypal.captureOrder({
     orderId,
-    requestId: `capture:${attempt.id}`,
+    requestId: captureRequestId(attempt.id),
   });
   const capture = firstCapture(order);
   if (capture?.status === "PENDING") {
