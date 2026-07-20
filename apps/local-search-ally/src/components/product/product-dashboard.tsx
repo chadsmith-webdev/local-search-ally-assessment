@@ -63,8 +63,8 @@ export function ProductAccessState({
           <h1 className="font-display text-3xl font-semibold leading-tight">{title}</h1>
           <p className="mt-3 max-w-2xl leading-7 text-text-secondary">{message}</p>
           <p className="mt-4 text-sm leading-6 text-text-tertiary">
-            Product access is granted only after a verified entitlement. Phase 3 uses a development-only fixture for testing
-            the protected experience.
+            Product access is granted only after a verified entitlement. Development fixture links are still limited to
+            local preview states.
           </p>
           <Button asChild className="mt-6" variant="secondary">
             <a href="/contact">
@@ -87,7 +87,7 @@ export function ProductUnderDevelopmentNotice() {
           <p className="font-semibold text-foreground">Development access fixture</p>
           <p className="mt-1 text-sm leading-6 text-text-secondary">
             This page is protected, but the current access comes from a development fixture. It does not prove payment.
-            The offer and product remain non-public until checkout, fulfillment, and purchase verification are complete.
+            The offer and product remain non-public while sandbox checkout and entitlement verification are tested.
           </p>
         </div>
       </div>

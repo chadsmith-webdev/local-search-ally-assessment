@@ -156,6 +156,8 @@ export async function createDevelopmentAssessmentFunnelFixtures(origin = "http:/
   ];
 
   if (generated.status === "completed") {
+    const generatedResultUrl = new URL(generated.resultUrl);
+    const generatedResultToken = generatedResultUrl.searchParams.get("token") ?? generated.tokenValue;
     const invalidTokenHref = `/results/${generated.result.id}?token=invalid`;
     const expiredTokenValue = "rat_dev_expired_fixture";
     const expiredToken: ResultAccessToken = {
@@ -190,6 +192,10 @@ export async function createDevelopmentAssessmentFunnelFixtures(origin = "http:/
 
     fixtureLinks.push(
       { label: "Secure result", href: generated.resultUrl.replace(origin, "") },
+      {
+        label: "Sandbox checkout preview",
+        href: `/checkout/contractor-review-proof-system?result=${generated.result.id}&token=${generatedResultToken}`,
+      },
       { label: "Invalid result token", href: invalidTokenHref },
       { label: "Expired result token", href: `/results/${generated.result.id}?token=${expiredTokenValue}` },
       {

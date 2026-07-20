@@ -2,7 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod/v4";
 import { productSlugSchema } from "./products";
 
-export const productAccessStatusSchema = z.enum(["active", "expired", "revoked"]);
+export const productAccessStatusSchema = z.enum(["active", "expired", "revoked", "refunded"]);
 export const productEntitlementSourceSchema = z.enum(["verified-purchase", "development-fixture"]);
 export const productAccessValidationStatusSchema = z.enum([
   "valid",
@@ -133,10 +133,10 @@ export function validateProductAccessToken({
     };
   }
 
-  if (token.status === "revoked" || entitlement.status === "revoked") {
+  if (token.status === "revoked" || entitlement.status === "revoked" || entitlement.status === "refunded") {
     return {
       status: "revoked-access",
-      message: "This product access has been revoked.",
+      message: "This product access is no longer active.",
     };
   }
 

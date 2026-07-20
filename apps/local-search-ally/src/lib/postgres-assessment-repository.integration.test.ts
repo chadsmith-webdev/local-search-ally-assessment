@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -119,8 +119,10 @@ describe.skipIf(!runIntegration)("PostgresAssessmentRepository", () => {
     await admin.connect();
     await admin.query(`CREATE SCHEMA "${schema}"`);
     await admin.query(`SET search_path TO "${schema}"`);
-    const sql = readFileSync(join(process.cwd(), "persistence/migrations/001_assessment_funnel.sql"), "utf8");
-    await admin.query(sql);
+    const migrationsDir = join(process.cwd(), "persistence/migrations");
+    for (const file of readdirSync(migrationsDir).filter((entry) => entry.endsWith(".sql")).sort()) {
+      await admin.query(readFileSync(join(migrationsDir, file), "utf8"));
+    }
   }, 30_000);
 
   afterAll(async () => {

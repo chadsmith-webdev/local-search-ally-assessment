@@ -8,6 +8,12 @@ const requiredTables = [
   "result_access_tokens",
   "result_email_events",
   "funnel_events",
+  "paypal_checkout_attempts",
+  "purchases",
+  "product_entitlements",
+  "product_access_tokens",
+  "paypal_webhook_events",
+  "product_delivery_events",
   "app_migrations",
 ];
 
@@ -18,6 +24,16 @@ const requiredIndexes = [
   "result_access_tokens_token_digest_key",
   "result_email_events_idempotency_key_key",
   "funnel_events_idempotency_key_key",
+  "funnel_events_purchase_id_idx",
+  "paypal_checkout_attempts_paypal_order_id_key",
+  "paypal_checkout_attempts_idempotency_key_key",
+  "purchases_checkout_attempt_id_key",
+  "purchases_paypal_order_id_key",
+  "purchases_paypal_capture_id_key",
+  "product_entitlements_purchase_id_product_slug_product_versi_key",
+  "product_access_tokens_token_digest_key",
+  "paypal_webhook_events_paypal_event_id_key",
+  "product_delivery_events_idempotency_key_key",
 ];
 
 let connection;

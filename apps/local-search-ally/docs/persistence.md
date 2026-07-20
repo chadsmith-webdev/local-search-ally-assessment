@@ -108,4 +108,5 @@ Tests create isolated memory repositories where practical. Postgres integration 
 
 - Production database migrations must be explicitly applied to the intended Supabase project.
 - Backup, retention, deletion, and legal review decisions remain open.
-- No checkout, payment webhook, purchase confirmation, fulfillment unlock, or email provider integration is enabled by this phase.
+- PayPal sandbox checkout and sandbox entitlement unlocks require configured sandbox credentials.
+- Live checkout, live payment webhook processing, automatic refund decisions, and live email delivery remain blocked.

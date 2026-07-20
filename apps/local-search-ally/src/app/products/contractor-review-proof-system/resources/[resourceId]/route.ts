@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { validateDevelopmentProductAccess } from "@/domain/product-access";
 import { contractorReviewProofProduct, getProductResource } from "@/domain/products";
+import { validateContractorReviewProofAccess } from "@/lib/product-access-service";
 
 type ResourceRouteContext = {
   params: Promise<{
@@ -25,7 +25,7 @@ function filenameFromReference(reference: string) {
 export async function GET(request: Request, context: ResourceRouteContext) {
   const params = await context.params;
   const tokenValue = new URL(request.url).searchParams.get("token");
-  const access = validateDevelopmentProductAccess(tokenValue);
+  const access = await validateContractorReviewProofAccess({ tokenValue });
 
   if (access.status !== "valid") {
     return NextResponse.json(

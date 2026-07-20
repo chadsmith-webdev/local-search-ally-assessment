@@ -1,11 +1,30 @@
 import pg from "pg";
 import { assessmentSessionSchema, type AssessmentSession } from "@/domain/assessment-session";
+import {
+  paypalCheckoutAttemptSchema,
+  paypalWebhookEventSchema,
+  productDeliveryEventSchema,
+  productEntitlementRecordSchema,
+  purchaseSchema,
+  type PayPalCheckoutAttempt,
+  type PayPalWebhookEvent,
+  type ProductDeliveryEvent,
+  type ProductEntitlementRecord,
+  type Purchase,
+} from "@/domain/commerce";
 import { funnelEventSchema, type FunnelEvent, type FunnelEventName } from "@/domain/events";
 import {
   leadAssessmentAssociationSchema,
   type LeadAssessmentAssociation,
 } from "@/domain/lead-assessments";
 import { assessmentLeadSchema, type AssessmentLead } from "@/domain/leads";
+import {
+  type ProductAccessToken,
+  type ProductEntitlement,
+  createProductAccessTokenValue,
+  hashProductAccessToken,
+  productAccessTokenSchema,
+} from "@/domain/product-access";
 import {
   type ResultAccessToken,
   createResultAccessTokenValue,
@@ -205,6 +224,146 @@ function mapEvent(row: Record<string, unknown>): FunnelEvent {
       occurredAt: iso(row.occurred_at),
     }),
   );
+}
+
+function mapCheckoutAttempt(row: Record<string, unknown>): PayPalCheckoutAttempt {
+  return parsePersisted("checkout attempt", () =>
+    paypalCheckoutAttemptSchema.parse({
+      id: row.id,
+      assessmentId: row.assessment_id,
+      resultId: row.result_id,
+      leadId: row.lead_id,
+      offerSlug: row.offer_slug,
+      productSlug: row.product_slug,
+      productVersion: row.product_version,
+      expectedAmountCents: row.expected_amount_cents,
+      expectedCurrency: row.expected_currency,
+      paypalOrderId: optionalString(row.paypal_order_id),
+      idempotencyKey: row.idempotency_key,
+      status: row.status,
+      createdAt: iso(row.created_at),
+      updatedAt: iso(row.updated_at),
+      expiresAt: optionalIso(row.expires_at),
+      failureReason: optionalString(row.failure_reason),
+    }),
+  );
+}
+
+function mapPurchase(row: Record<string, unknown>): Purchase {
+  return parsePersisted("purchase", () =>
+    purchaseSchema.parse({
+      id: row.id,
+      checkoutAttemptId: row.checkout_attempt_id,
+      assessmentId: row.assessment_id,
+      resultId: row.result_id,
+      leadId: row.lead_id,
+      offerSlug: row.offer_slug,
+      productSlug: row.product_slug,
+      productVersion: row.product_version,
+      paymentProvider: row.payment_provider,
+      paypalOrderId: row.paypal_order_id,
+      paypalCaptureId: row.paypal_capture_id,
+      paypalPayerId: optionalString(row.paypal_payer_id),
+      expectedAmountCents: row.expected_amount_cents,
+      capturedAmountCents: row.captured_amount_cents,
+      currency: row.currency,
+      paymentStatus: row.payment_status,
+      fulfillmentStatus: row.fulfillment_status,
+      purchaserEmail: optionalString(row.purchaser_email),
+      createdAt: iso(row.created_at),
+      paidAt: optionalIso(row.paid_at),
+      updatedAt: iso(row.updated_at),
+      revokedAt: optionalIso(row.revoked_at),
+      refundedAt: optionalIso(row.refunded_at),
+    }),
+  );
+}
+
+function mapProductEntitlementRecord(row: Record<string, unknown>): ProductEntitlementRecord {
+  return parsePersisted("product entitlement", () =>
+    productEntitlementRecordSchema.parse({
+      id: row.id,
+      purchaseId: row.purchase_id,
+      leadId: row.lead_id,
+      productSlug: row.product_slug,
+      productVersion: row.product_version,
+      status: row.status,
+      grantedAt: iso(row.granted_at),
+      lastAccessedAt: optionalIso(row.last_accessed_at),
+      revokedAt: optionalIso(row.revoked_at),
+      revocationReason: optionalString(row.revocation_reason),
+      createdAt: iso(row.created_at),
+      updatedAt: iso(row.updated_at),
+    }),
+  );
+}
+
+function mapProductAccessToken(row: Record<string, unknown>): ProductAccessToken {
+  return parsePersisted("product access token", () =>
+    productAccessTokenSchema.parse({
+      id: row.id,
+      productSlug: row.product_slug,
+      entitlementId: row.entitlement_id,
+      tokenDigest: row.token_digest,
+      status: row.status,
+      createdAt: iso(row.created_at),
+      expiresAt: optionalIso(row.expires_at),
+      lastUsedAt: optionalIso(row.last_used_at),
+    }),
+  );
+}
+
+function mapPayPalWebhookEvent(row: Record<string, unknown>): PayPalWebhookEvent {
+  return parsePersisted("PayPal webhook event", () =>
+    paypalWebhookEventSchema.parse({
+      id: row.id,
+      paypalEventId: row.paypal_event_id,
+      eventType: row.event_type,
+      environment: row.environment,
+      processingStatus: row.processing_status,
+      attemptCount: row.attempt_count,
+      firstReceivedAt: iso(row.first_received_at),
+      lastAttemptedAt: optionalIso(row.last_attempted_at),
+      processedAt: optionalIso(row.processed_at),
+      failureReason: optionalString(row.failure_reason),
+    }),
+  );
+}
+
+function mapProductDeliveryEvent(row: Record<string, unknown>): ProductDeliveryEvent {
+  return parsePersisted("product delivery event", () =>
+    productDeliveryEventSchema.parse({
+      id: row.id,
+      entitlementId: row.entitlement_id,
+      purchaseId: row.purchase_id,
+      leadId: row.lead_id,
+      productSlug: row.product_slug,
+      recipientEmail: row.recipient_email,
+      status: row.status,
+      idempotencyKey: row.idempotency_key,
+      attemptCount: row.attempt_count,
+      providerMessageId: optionalString(row.provider_message_id),
+      createdAt: iso(row.created_at),
+      updatedAt: iso(row.updated_at),
+      sentAt: optionalIso(row.sent_at),
+      errorMessage: optionalString(row.error_message),
+    }),
+  );
+}
+
+function toProductEntitlement(record: ProductEntitlementRecord): ProductEntitlement {
+  return {
+    id: record.id,
+    productSlug: record.productSlug,
+    productVersion: record.productVersion,
+    leadId: record.leadId,
+    purchaseId: record.purchaseId,
+    source: "verified-purchase",
+    status: record.status,
+    grantedAt: record.grantedAt,
+    revokedAt: record.revokedAt,
+    lastAccessedAt: record.lastAccessedAt,
+  };
 }
 
 function mergeLead(existing: AssessmentLead, incoming: AssessmentLead): AssessmentLead {
@@ -630,21 +789,366 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
     return result.rows[0] ? mapEmailJob(result.rows[0]) : null;
   }
 
+  async saveCheckoutAttempt(attempt: PayPalCheckoutAttempt) {
+    const parsed = paypalCheckoutAttemptSchema.parse(attempt);
+    const result = await this.query(
+      `
+        INSERT INTO paypal_checkout_attempts (
+          id, assessment_id, result_id, lead_id, offer_slug, product_slug, product_version,
+          expected_amount_cents, expected_currency, paypal_order_id, idempotency_key, status,
+          created_at, updated_at, expires_at, failure_reason
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        ON CONFLICT (id) DO UPDATE SET
+          paypal_order_id = EXCLUDED.paypal_order_id,
+          status = EXCLUDED.status,
+          updated_at = EXCLUDED.updated_at,
+          expires_at = EXCLUDED.expires_at,
+          failure_reason = EXCLUDED.failure_reason
+        RETURNING *
+      `,
+      [
+        parsed.id,
+        parsed.assessmentId,
+        parsed.resultId,
+        parsed.leadId,
+        parsed.offerSlug,
+        parsed.productSlug,
+        parsed.productVersion,
+        parsed.expectedAmountCents,
+        parsed.expectedCurrency,
+        parsed.paypalOrderId ?? null,
+        parsed.idempotencyKey,
+        parsed.status,
+        parsed.createdAt,
+        parsed.updatedAt,
+        parsed.expiresAt ?? null,
+        parsed.failureReason ?? null,
+      ],
+    );
+    return mapCheckoutAttempt(result.rows[0]);
+  }
+
+  async createCheckoutAttemptOnce(attempt: PayPalCheckoutAttempt) {
+    const existing = await this.findCheckoutAttemptByIdempotencyKey(attempt.idempotencyKey);
+    if (existing) return existing;
+    return this.saveCheckoutAttempt(attempt);
+  }
+
+  async findCheckoutAttempt(id: string) {
+    const result = await this.query("SELECT * FROM paypal_checkout_attempts WHERE id = $1", [id]);
+    return result.rows[0] ? mapCheckoutAttempt(result.rows[0]) : null;
+  }
+
+  async findCheckoutAttemptByPayPalOrderId(paypalOrderId: string) {
+    const result = await this.query("SELECT * FROM paypal_checkout_attempts WHERE paypal_order_id = $1", [paypalOrderId]);
+    return result.rows[0] ? mapCheckoutAttempt(result.rows[0]) : null;
+  }
+
+  async findCheckoutAttemptByIdempotencyKey(idempotencyKey: string) {
+    const result = await this.query("SELECT * FROM paypal_checkout_attempts WHERE idempotency_key = $1", [idempotencyKey]);
+    return result.rows[0] ? mapCheckoutAttempt(result.rows[0]) : null;
+  }
+
+  async savePurchase(purchase: Purchase) {
+    const parsed = purchaseSchema.parse(purchase);
+    const result = await this.query(
+      `
+        INSERT INTO purchases (
+          id, checkout_attempt_id, assessment_id, result_id, lead_id, offer_slug, product_slug, product_version,
+          payment_provider, paypal_order_id, paypal_capture_id, paypal_payer_id, expected_amount_cents,
+          captured_amount_cents, currency, payment_status, fulfillment_status, purchaser_email,
+          created_at, paid_at, updated_at, revoked_at, refunded_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+        ON CONFLICT (paypal_order_id) DO UPDATE SET
+          paypal_capture_id = EXCLUDED.paypal_capture_id,
+          payment_status = EXCLUDED.payment_status,
+          fulfillment_status = EXCLUDED.fulfillment_status,
+          paid_at = EXCLUDED.paid_at,
+          updated_at = EXCLUDED.updated_at,
+          refunded_at = EXCLUDED.refunded_at
+        RETURNING *
+      `,
+      [
+        parsed.id,
+        parsed.checkoutAttemptId,
+        parsed.assessmentId,
+        parsed.resultId,
+        parsed.leadId,
+        parsed.offerSlug,
+        parsed.productSlug,
+        parsed.productVersion,
+        parsed.paymentProvider,
+        parsed.paypalOrderId,
+        parsed.paypalCaptureId,
+        parsed.paypalPayerId ?? null,
+        parsed.expectedAmountCents,
+        parsed.capturedAmountCents,
+        parsed.currency,
+        parsed.paymentStatus,
+        parsed.fulfillmentStatus,
+        parsed.purchaserEmail ?? null,
+        parsed.createdAt,
+        parsed.paidAt ?? null,
+        parsed.updatedAt,
+        parsed.revokedAt ?? null,
+        parsed.refundedAt ?? null,
+      ],
+    );
+    return mapPurchase(result.rows[0]);
+  }
+
+  async createPurchaseOnce(purchase: Purchase) {
+    const existing = await this.findPurchaseByPayPalOrderId(purchase.paypalOrderId);
+    if (existing) return existing;
+    return this.savePurchase(purchase);
+  }
+
+  async findPurchase(id: string) {
+    const result = await this.query("SELECT * FROM purchases WHERE id = $1", [id]);
+    return result.rows[0] ? mapPurchase(result.rows[0]) : null;
+  }
+
+  async findPurchaseByCheckoutAttemptId(checkoutAttemptId: string) {
+    const result = await this.query("SELECT * FROM purchases WHERE checkout_attempt_id = $1", [checkoutAttemptId]);
+    return result.rows[0] ? mapPurchase(result.rows[0]) : null;
+  }
+
+  async findPurchaseByPayPalOrderId(paypalOrderId: string) {
+    const result = await this.query("SELECT * FROM purchases WHERE paypal_order_id = $1", [paypalOrderId]);
+    return result.rows[0] ? mapPurchase(result.rows[0]) : null;
+  }
+
+  async findPurchaseByPayPalCaptureId(paypalCaptureId: string) {
+    const result = await this.query("SELECT * FROM purchases WHERE paypal_capture_id = $1", [paypalCaptureId]);
+    return result.rows[0] ? mapPurchase(result.rows[0]) : null;
+  }
+
+  async saveProductEntitlement(entitlement: ProductEntitlementRecord) {
+    const parsed = productEntitlementRecordSchema.parse(entitlement);
+    const result = await this.query(
+      `
+        INSERT INTO product_entitlements (
+          id, purchase_id, lead_id, product_slug, product_version, status, granted_at, last_accessed_at,
+          revoked_at, revocation_reason, created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ON CONFLICT (purchase_id, product_slug, product_version) DO UPDATE SET
+          status = EXCLUDED.status,
+          last_accessed_at = EXCLUDED.last_accessed_at,
+          revoked_at = EXCLUDED.revoked_at,
+          revocation_reason = EXCLUDED.revocation_reason,
+          updated_at = EXCLUDED.updated_at
+        RETURNING *
+      `,
+      [
+        parsed.id,
+        parsed.purchaseId,
+        parsed.leadId,
+        parsed.productSlug,
+        parsed.productVersion,
+        parsed.status,
+        parsed.grantedAt,
+        parsed.lastAccessedAt ?? null,
+        parsed.revokedAt ?? null,
+        parsed.revocationReason ?? null,
+        parsed.createdAt,
+        parsed.updatedAt,
+      ],
+    );
+    return mapProductEntitlementRecord(result.rows[0]);
+  }
+
+  async createProductEntitlementOnce(entitlement: ProductEntitlementRecord) {
+    const existing = await this.findProductEntitlementByPurchaseAndProduct(
+      entitlement.purchaseId,
+      entitlement.productSlug,
+      entitlement.productVersion,
+    );
+    if (existing) return existing;
+    return this.saveProductEntitlement(entitlement);
+  }
+
+  async findProductEntitlement(id: string) {
+    const result = await this.query("SELECT * FROM product_entitlements WHERE id = $1", [id]);
+    return result.rows[0] ? mapProductEntitlementRecord(result.rows[0]) : null;
+  }
+
+  async findProductEntitlementByPurchaseAndProduct(purchaseId: string, productSlug: string, productVersion: string) {
+    const result = await this.query(
+      "SELECT * FROM product_entitlements WHERE purchase_id = $1 AND product_slug = $2 AND product_version = $3",
+      [purchaseId, productSlug, productVersion],
+    );
+    return result.rows[0] ? mapProductEntitlementRecord(result.rows[0]) : null;
+  }
+
+  async findProductEntitlementsForProduct(productSlug: string) {
+    const result = await this.query("SELECT * FROM product_entitlements WHERE product_slug = $1", [productSlug]);
+    return result.rows.map((row) => toProductEntitlement(mapProductEntitlementRecord(row)));
+  }
+
+  async saveProductAccessToken(token: ProductAccessToken) {
+    const parsed = productAccessTokenSchema.parse(token);
+    const result = await this.query(
+      `
+        INSERT INTO product_access_tokens (
+          id, product_slug, entitlement_id, token_digest, status, created_at, expires_at, last_used_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (id) DO UPDATE SET
+          status = EXCLUDED.status,
+          expires_at = EXCLUDED.expires_at,
+          last_used_at = EXCLUDED.last_used_at
+        RETURNING *
+      `,
+      [
+        parsed.id,
+        parsed.productSlug,
+        parsed.entitlementId,
+        parsed.tokenDigest,
+        parsed.status,
+        parsed.createdAt,
+        parsed.expiresAt ?? null,
+        parsed.lastUsedAt ?? null,
+      ],
+    );
+    return mapProductAccessToken(result.rows[0]);
+  }
+
+  async findProductAccessTokensForProduct(productSlug: string) {
+    const result = await this.query("SELECT * FROM product_access_tokens WHERE product_slug = $1 ORDER BY created_at ASC", [productSlug]);
+    return result.rows.map(mapProductAccessToken);
+  }
+
+  async createProductAccess(entitlement: ProductEntitlementRecord, now: string) {
+    const tokenValue = createProductAccessTokenValue();
+    const token = await this.saveProductAccessToken({
+      id: createEntityId("access"),
+      productSlug: entitlement.productSlug,
+      entitlementId: entitlement.id,
+      tokenDigest: hashProductAccessToken(tokenValue),
+      status: "active",
+      createdAt: now,
+    });
+    return { token, tokenValue };
+  }
+
+  async savePayPalWebhookEvent(event: PayPalWebhookEvent) {
+    const parsed = paypalWebhookEventSchema.parse(event);
+    const result = await this.query(
+      `
+        INSERT INTO paypal_webhook_events (
+          id, paypal_event_id, event_type, environment, processing_status, attempt_count,
+          first_received_at, last_attempted_at, processed_at, failure_reason
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (paypal_event_id) DO UPDATE SET
+          processing_status = EXCLUDED.processing_status,
+          attempt_count = EXCLUDED.attempt_count,
+          last_attempted_at = EXCLUDED.last_attempted_at,
+          processed_at = EXCLUDED.processed_at,
+          failure_reason = EXCLUDED.failure_reason
+        RETURNING *
+      `,
+      [
+        parsed.id,
+        parsed.paypalEventId,
+        parsed.eventType,
+        parsed.environment,
+        parsed.processingStatus,
+        parsed.attemptCount,
+        parsed.firstReceivedAt,
+        parsed.lastAttemptedAt ?? null,
+        parsed.processedAt ?? null,
+        parsed.failureReason ?? null,
+      ],
+    );
+    return mapPayPalWebhookEvent(result.rows[0]);
+  }
+
+  async createPayPalWebhookEventOnce(event: PayPalWebhookEvent) {
+    const existing = await this.findPayPalWebhookEvent(event.paypalEventId);
+    if (existing) {
+      return this.savePayPalWebhookEvent({
+        ...existing,
+        attemptCount: existing.attemptCount + 1,
+        lastAttemptedAt: event.lastAttemptedAt ?? event.firstReceivedAt,
+      });
+    }
+    return this.savePayPalWebhookEvent(event);
+  }
+
+  async findPayPalWebhookEvent(paypalEventId: string) {
+    const result = await this.query("SELECT * FROM paypal_webhook_events WHERE paypal_event_id = $1", [paypalEventId]);
+    return result.rows[0] ? mapPayPalWebhookEvent(result.rows[0]) : null;
+  }
+
+  async saveProductDeliveryEvent(event: ProductDeliveryEvent) {
+    const parsed = productDeliveryEventSchema.parse(event);
+    const result = await this.query(
+      `
+        INSERT INTO product_delivery_events (
+          id, entitlement_id, purchase_id, lead_id, product_slug, recipient_email, status, idempotency_key,
+          attempt_count, provider_message_id, created_at, updated_at, sent_at, error_message
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ON CONFLICT (id) DO UPDATE SET
+          status = EXCLUDED.status,
+          attempt_count = EXCLUDED.attempt_count,
+          provider_message_id = EXCLUDED.provider_message_id,
+          updated_at = EXCLUDED.updated_at,
+          sent_at = EXCLUDED.sent_at,
+          error_message = EXCLUDED.error_message
+        RETURNING *
+      `,
+      [
+        parsed.id,
+        parsed.entitlementId,
+        parsed.purchaseId,
+        parsed.leadId,
+        parsed.productSlug,
+        parsed.recipientEmail,
+        parsed.status,
+        parsed.idempotencyKey,
+        parsed.attemptCount,
+        parsed.providerMessageId ?? null,
+        parsed.createdAt,
+        parsed.updatedAt,
+        parsed.sentAt ?? null,
+        parsed.errorMessage ?? null,
+      ],
+    );
+    return mapProductDeliveryEvent(result.rows[0]);
+  }
+
+  async queueProductDeliveryEventOnce(event: ProductDeliveryEvent) {
+    const existing = await this.findProductDeliveryEventByIdempotencyKey(event.idempotencyKey);
+    if (existing) return existing;
+    return this.saveProductDeliveryEvent(event);
+  }
+
+  async findProductDeliveryEventByIdempotencyKey(idempotencyKey: string) {
+    const result = await this.query("SELECT * FROM product_delivery_events WHERE idempotency_key = $1", [idempotencyKey]);
+    return result.rows[0] ? mapProductDeliveryEvent(result.rows[0]) : null;
+  }
+
   async recordEvent(input: {
     name: FunnelEventName;
     assessmentId?: string;
     leadId?: string;
     resultId?: string;
     offerSlug?: string | null;
+    purchaseId?: string;
     idempotencyKey: string;
     occurredAt: string;
   }) {
     const saved = await this.query(
       `
         INSERT INTO funnel_events (
-          id, name, assessment_id, lead_id, result_id, offer_slug, idempotency_key, occurred_at
+          id, name, assessment_id, lead_id, result_id, offer_slug, purchase_id, idempotency_key, occurred_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT (idempotency_key) DO NOTHING
         RETURNING *
       `,
@@ -655,6 +1159,7 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         input.leadId ?? null,
         input.resultId ?? null,
         input.offerSlug ?? null,
+        input.purchaseId ?? null,
         input.idempotencyKey,
         input.occurredAt,
       ],

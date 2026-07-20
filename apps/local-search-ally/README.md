@@ -47,7 +47,8 @@ npm run dev
 
 Production must use `ASSESSMENT_STORE_ADAPTER=postgres` and `DATABASE_URL`; it never falls back to memory. Migration and integration-test details are documented in `docs/persistence.md`.
 
-Checkout, payment events, purchase confirmation, product fulfillment unlocks, and real email delivery remain blocked external integrations.
+PayPal sandbox checkout, verified sandbox capture, and product entitlement unlocks are documented in `docs/paypal-commerce.md`.
+Live checkout, live payment webhooks, automatic refund handling, and real email delivery remain blocked external integrations.
 
 ## Folder Structure
 

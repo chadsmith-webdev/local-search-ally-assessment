@@ -5,6 +5,7 @@ export type EntityPrefix =
   | "purchase"
   | "access"
   | "checkout"
+  | "entitlement"
   | "event";
 
 export function createEntityId(prefix: EntityPrefix, seed = crypto.randomUUID()) {

@@ -1,7 +1,15 @@
 import type { AssessmentSession } from "@/domain/assessment-session";
+import type {
+  PayPalCheckoutAttempt,
+  PayPalWebhookEvent,
+  ProductDeliveryEvent,
+  ProductEntitlementRecord,
+  Purchase,
+} from "@/domain/commerce";
 import type { FunnelEvent, FunnelEventName } from "@/domain/events";
 import type { LeadAssessmentAssociation } from "@/domain/lead-assessments";
 import type { AssessmentLead } from "@/domain/leads";
+import type { ProductAccessToken, ProductEntitlement } from "@/domain/product-access";
 import type { ResultAccessToken } from "@/domain/result-access";
 import type { ResultEmailJob } from "@/domain/result-email";
 import type { SavedAssessmentResult } from "@/domain/results";
@@ -21,6 +29,12 @@ export interface AssessmentStoreSnapshot {
   resultAccessTokens: ResultAccessToken[];
   emailJobs: ResultEmailJob[];
   events: FunnelEvent[];
+  checkoutAttempts: PayPalCheckoutAttempt[];
+  purchases: Purchase[];
+  productEntitlements: ProductEntitlementRecord[];
+  productAccessTokens: ProductAccessToken[];
+  paypalWebhookEvents: PayPalWebhookEvent[];
+  productDeliveryEvents: ProductDeliveryEvent[];
 }
 
 export interface AssessmentRepository {
@@ -46,12 +60,38 @@ export interface AssessmentRepository {
   saveEmailJob(job: ResultEmailJob): Promise<ResultEmailJob>;
   queueResultEmailOnce(job: ResultEmailJob): Promise<ResultEmailJob>;
   findEmailJobByIdempotencyKey(idempotencyKey: string): Promise<ResultEmailJob | null>;
+  saveCheckoutAttempt(attempt: PayPalCheckoutAttempt): Promise<PayPalCheckoutAttempt>;
+  createCheckoutAttemptOnce(attempt: PayPalCheckoutAttempt): Promise<PayPalCheckoutAttempt>;
+  findCheckoutAttempt(id: string): Promise<PayPalCheckoutAttempt | null>;
+  findCheckoutAttemptByPayPalOrderId(paypalOrderId: string): Promise<PayPalCheckoutAttempt | null>;
+  findCheckoutAttemptByIdempotencyKey(idempotencyKey: string): Promise<PayPalCheckoutAttempt | null>;
+  savePurchase(purchase: Purchase): Promise<Purchase>;
+  createPurchaseOnce(purchase: Purchase): Promise<Purchase>;
+  findPurchase(id: string): Promise<Purchase | null>;
+  findPurchaseByCheckoutAttemptId(checkoutAttemptId: string): Promise<Purchase | null>;
+  findPurchaseByPayPalOrderId(paypalOrderId: string): Promise<Purchase | null>;
+  findPurchaseByPayPalCaptureId(paypalCaptureId: string): Promise<Purchase | null>;
+  saveProductEntitlement(entitlement: ProductEntitlementRecord): Promise<ProductEntitlementRecord>;
+  createProductEntitlementOnce(entitlement: ProductEntitlementRecord): Promise<ProductEntitlementRecord>;
+  findProductEntitlement(id: string): Promise<ProductEntitlementRecord | null>;
+  findProductEntitlementByPurchaseAndProduct(purchaseId: string, productSlug: string, productVersion: string): Promise<ProductEntitlementRecord | null>;
+  findProductEntitlementsForProduct(productSlug: string): Promise<ProductEntitlement[]>;
+  saveProductAccessToken(token: ProductAccessToken): Promise<ProductAccessToken>;
+  findProductAccessTokensForProduct(productSlug: string): Promise<ProductAccessToken[]>;
+  createProductAccess(entitlement: ProductEntitlementRecord, now: string): Promise<{ token: ProductAccessToken; tokenValue: string }>;
+  savePayPalWebhookEvent(event: PayPalWebhookEvent): Promise<PayPalWebhookEvent>;
+  createPayPalWebhookEventOnce(event: PayPalWebhookEvent): Promise<PayPalWebhookEvent>;
+  findPayPalWebhookEvent(paypalEventId: string): Promise<PayPalWebhookEvent | null>;
+  saveProductDeliveryEvent(event: ProductDeliveryEvent): Promise<ProductDeliveryEvent>;
+  queueProductDeliveryEventOnce(event: ProductDeliveryEvent): Promise<ProductDeliveryEvent>;
+  findProductDeliveryEventByIdempotencyKey(idempotencyKey: string): Promise<ProductDeliveryEvent | null>;
   recordEvent(input: {
     name: FunnelEventName;
     assessmentId?: string;
     leadId?: string;
     resultId?: string;
     offerSlug?: string | null;
+    purchaseId?: string;
     idempotencyKey: string;
     occurredAt: string;
   }): Promise<FunnelEvent | null>;
@@ -73,6 +113,7 @@ export class AssessmentPersistenceError extends Error {
       | "result-conflict"
       | "token-conflict"
       | "email-event-conflict"
+      | "commerce-conflict"
       | "migration-mismatch"
       | "production-memory-disabled",
   ) {

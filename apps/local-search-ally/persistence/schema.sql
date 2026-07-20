@@ -7,3 +7,4 @@
 -- - Public routes must use opaque result-access tokens, never email addresses or result IDs alone.
 
 \i persistence/migrations/001_assessment_funnel.sql
+\i persistence/migrations/002_paypal_sandbox_commerce.sql

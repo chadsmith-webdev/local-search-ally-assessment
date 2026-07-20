@@ -1,7 +1,6 @@
 import { ProductAccessState, ProductDashboard } from "@/components/product/product-dashboard";
 import {
   developmentProductAccessToken,
-  validateDevelopmentProductAccess,
 } from "@/domain/product-access";
 import {
   contractorReviewProofProduct,
@@ -9,6 +8,7 @@ import {
   getProductModule,
 } from "@/domain/products";
 import { createProductProgress, markProductModuleComplete, setLastActiveProductModule } from "@/domain/product-progress";
+import { validateContractorReviewProofAccess } from "@/lib/product-access-service";
 
 type ProductPageSearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -34,7 +34,7 @@ export default async function ContractorReviewProofSystemPage({
   const tokenValue = firstParam(params.token);
   const requestedModuleId = firstParam(params.module);
   const requestedCompletedModules = completedModuleIds(params.completed);
-  const access = validateDevelopmentProductAccess(tokenValue);
+  const access = await validateContractorReviewProofAccess({ tokenValue });
 
   if (access.status !== "valid") {
     return <ProductAccessState status={access.status} message={access.message} />;
