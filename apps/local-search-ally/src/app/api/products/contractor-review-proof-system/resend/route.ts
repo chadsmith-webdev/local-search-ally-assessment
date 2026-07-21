@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { contractorReviewProofProduct } from "@/domain/products";
 import { validateProductAccessToken } from "@/domain/product-access";
 import { getAssessmentRepository } from "@/lib/assessment-store";
+import { checkRateLimit, hashRateLimitKey, rateLimitResponseMessage } from "@/lib/rate-limit";
 import { sendProductAccessEmail } from "@/lib/transactional-email-service";
 
 async function tokenFromRequest(request: Request) {
@@ -13,6 +14,14 @@ export async function POST(request: Request) {
   const tokenValue = await tokenFromRequest(request);
   const repository = getAssessmentRepository();
   const now = new Date().toISOString();
+  const limit = checkRateLimit({
+    bucket: "product-email-resend",
+    key: hashRateLimitKey(tokenValue ?? "missing"),
+    limit: 3,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!limit.allowed) return NextResponse.json({ error: rateLimitResponseMessage() }, { status: 429 });
+
   const access = validateProductAccessToken({
     tokenValue,
     productSlug: contractorReviewProofProduct.slug,

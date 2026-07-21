@@ -6,6 +6,7 @@ import type { AssessmentRepository } from "./assessment-repository";
 import { getAssessmentRepository } from "./assessment-store";
 import type { PayPalClient, PayPalOrder } from "./paypal-client";
 import { getPayPalConfig, type PayPalConfig } from "./paypal-config";
+import { assertSandboxCheckoutPreviewEnabled } from "./runtime-guards";
 import { queueProductDeliveryEvent, sendProductAccessEmail } from "./transactional-email-service";
 
 export const sandboxCheckoutSlug = "contractor-review-proof-system";
@@ -57,6 +58,7 @@ export async function loadCheckoutEligibility({
   tokenValue: string;
   repository?: AssessmentRepository;
 }): Promise<CheckoutEligibility> {
+  assertSandboxCheckoutPreviewEnabled();
   const result = await repository.findResult(resultId);
   if (!result) throw new Error("Assessment result was not found.");
   const tokens = await repository.findResultAccessTokensForResult(result.id);
@@ -104,6 +106,7 @@ export async function createPayPalOrderForResult({
   config?: PayPalConfig;
   now?: string;
 }) {
+  assertSandboxCheckoutPreviewEnabled();
   if (config.environment !== "sandbox") throw new Error("Only PayPal sandbox checkout is enabled.");
   const eligibility = await loadCheckoutEligibility({ resultId, tokenValue, repository });
   const idempotencyKey = `paypal-checkout:${eligibility.result.id}:${eligibility.lead.id}:${eligibility.offer.slug}`;

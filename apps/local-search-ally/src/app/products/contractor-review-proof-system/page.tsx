@@ -1,20 +1,20 @@
 import { ProductAccessState, ProductDashboard } from "@/components/product/product-dashboard";
 import {
-  developmentProductAccessToken,
-} from "@/domain/product-access";
-import {
   contractorReviewProofProduct,
   getOrderedProductModules,
   getProductModule,
 } from "@/domain/products";
 import { createProductProgress, markProductModuleComplete, setLastActiveProductModule } from "@/domain/product-progress";
 import { validateContractorReviewProofAccess } from "@/lib/product-access-service";
+import { noIndexMetadata } from "@/lib/runtime-guards";
 
 type ProductPageSearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
+
+export const metadata = noIndexMetadata;
 
 function completedModuleIds(value: string | string[] | undefined) {
   const raw = firstParam(value);
@@ -38,6 +38,9 @@ export default async function ContractorReviewProofSystemPage({
 
   if (access.status !== "valid") {
     return <ProductAccessState status={access.status} message={access.message} />;
+  }
+  if (!tokenValue) {
+    return <ProductAccessState status="no-access" message="A secure product-access link is required to view this product." />;
   }
 
   const product = contractorReviewProofProduct;
@@ -70,7 +73,7 @@ export default async function ContractorReviewProofSystemPage({
       modules={modules}
       currentModule={currentModule}
       progress={progress}
-      tokenValue={tokenValue ?? developmentProductAccessToken}
+      tokenValue={tokenValue}
       developmentAccess={access.entitlement.source === "development-fixture"}
     />
   );

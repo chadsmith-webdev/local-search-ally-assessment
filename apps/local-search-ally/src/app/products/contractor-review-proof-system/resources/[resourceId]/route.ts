@@ -33,7 +33,10 @@ export async function GET(request: Request, context: ResourceRouteContext) {
         error: access.status,
         message: access.message,
       },
-      { status: access.status === "no-access" ? 401 : 403 },
+      {
+        status: access.status === "no-access" ? 401 : 403,
+        headers: { "X-Robots-Tag": "noindex, nofollow" },
+      },
     );
   }
 
@@ -44,7 +47,7 @@ export async function GET(request: Request, context: ResourceRouteContext) {
         error: "resource-unavailable",
         message: "This resource is not available for download.",
       },
-      { status: 404 },
+      { status: 404, headers: { "X-Robots-Tag": "noindex, nofollow" } },
     );
   }
 
@@ -57,7 +60,7 @@ export async function GET(request: Request, context: ResourceRouteContext) {
         error: "resource-path-invalid",
         message: "This resource is not available for download.",
       },
-      { status: 404 },
+      { status: 404, headers: { "X-Robots-Tag": "noindex, nofollow" } },
     );
   }
 
@@ -68,7 +71,7 @@ export async function GET(request: Request, context: ResourceRouteContext) {
         error: "resource-file-missing",
         message: "This resource file is not available yet.",
       },
-      { status: 404 },
+      { status: 404, headers: { "X-Robots-Tag": "noindex, nofollow" } },
     );
   }
 
@@ -77,6 +80,7 @@ export async function GET(request: Request, context: ResourceRouteContext) {
       "Content-Type": contentTypes[resource.fileType],
       "Content-Disposition": `attachment; filename="${filename}"`,
       "Cache-Control": "private, no-store",
+      "X-Robots-Tag": "noindex, nofollow",
     },
   });
 }

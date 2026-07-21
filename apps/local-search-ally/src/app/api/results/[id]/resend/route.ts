@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { validateResultAccessToken } from "@/domain/result-access";
 import { getAssessmentRepository } from "@/lib/assessment-store";
+import { checkRateLimit, hashRateLimitKey, rateLimitResponseMessage } from "@/lib/rate-limit";
 import { sendAssessmentResultEmail } from "@/lib/transactional-email-service";
 
 type Params = Promise<{ id: string }>;
@@ -14,6 +15,14 @@ export async function POST(request: Request, { params }: { params: Params }) {
   const { id } = await params;
   const tokenValue = await tokenFromRequest(request);
   const repository = getAssessmentRepository();
+  const limit = checkRateLimit({
+    bucket: "result-email-resend",
+    key: hashRateLimitKey(`${id}:${tokenValue ?? "missing"}`),
+    limit: 3,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!limit.allowed) return NextResponse.json({ error: rateLimitResponseMessage() }, { status: 429 });
+
   const tokens = await repository.findResultAccessTokensForResult(id);
   const access = validateResultAccessToken({ tokenValue, resultId: id, tokens });
 

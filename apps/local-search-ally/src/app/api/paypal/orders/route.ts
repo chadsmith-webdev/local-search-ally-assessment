@@ -3,6 +3,7 @@ import { getAssessmentRepository } from "@/lib/assessment-store";
 import { PayPalRestClient } from "@/lib/paypal-client";
 import { createPayPalOrderForResult } from "@/lib/paypal-commerce";
 import { getPayPalConfig } from "@/lib/paypal-config";
+import { checkRateLimit, hashRateLimitKey, rateLimitResponseMessage } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   const repository = getAssessmentRepository();
@@ -12,6 +13,14 @@ export async function POST(request: Request) {
     if (!body.resultId || !body.token) {
       return NextResponse.json({ error: "Secure result context is required." }, { status: 400 });
     }
+    const limit = checkRateLimit({
+      bucket: "paypal-order",
+      key: hashRateLimitKey(body.resultId),
+      limit: 5,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!limit.allowed) return NextResponse.json({ error: rateLimitResponseMessage() }, { status: 429 });
+
     await repository.recordEvent({
       name: "paypal_order_requested",
       resultId: body.resultId,

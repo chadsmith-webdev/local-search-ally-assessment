@@ -5,6 +5,7 @@ import {
 } from "@/domain/product-access";
 import { contractorReviewProofProduct } from "@/domain/products";
 import { getAssessmentRepository } from "./assessment-store";
+import { developmentProductAccessEnabled } from "./runtime-guards";
 
 export async function validateContractorReviewProofAccess({
   tokenValue,
@@ -45,5 +46,6 @@ export async function validateContractorReviewProofAccess({
     });
     return persistent;
   }
-  return validateDevelopmentProductAccess(tokenValue);
+  if (developmentProductAccessEnabled()) return validateDevelopmentProductAccess(tokenValue);
+  return persistent;
 }

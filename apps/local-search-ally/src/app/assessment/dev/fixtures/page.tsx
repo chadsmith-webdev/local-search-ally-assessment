@@ -1,13 +1,18 @@
 import { headers } from "next/headers";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Card } from "@/components/foundation/Card";
 import { Container, Stack } from "@/components/foundation/Layout";
 import { createEntityId } from "@/domain/ids";
 import { createDevelopmentAssessmentFunnelFixtures } from "@/fixtures/assessment-funnel";
+import { developmentFixturesEnabled, noIndexMetadata } from "@/lib/runtime-guards";
 
 export const dynamic = "force-dynamic";
+export const metadata = noIndexMetadata;
 
 export default async function AssessmentFunnelFixturesPage() {
+  if (!developmentFixturesEnabled()) notFound();
+
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3010";
   const proto = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");

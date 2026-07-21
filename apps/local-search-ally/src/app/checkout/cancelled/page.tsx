@@ -1,8 +1,11 @@
 import { Card } from "@/components/foundation/Card";
 import { Container } from "@/components/foundation/Layout";
 import { getAssessmentRepository } from "@/lib/assessment-store";
+import { noIndexMetadata } from "@/lib/runtime-guards";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export const metadata = noIndexMetadata;
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;

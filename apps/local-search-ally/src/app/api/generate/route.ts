@@ -3,8 +3,15 @@ import { assessmentInputSchema, assessmentResultSchema } from "@/domain/assessme
 import { scoreAssessment } from "@/domain/scoring";
 import { composeAssessmentOpenUI } from "@/openui/compose";
 import { promptOptions } from "@/openui/prompt-options";
+import { developmentFixturesEnabled } from "@/lib/runtime-guards";
+
+function unavailable() {
+  return NextResponse.json({ error: "This development endpoint is unavailable." }, { status: 404 });
+}
 
 export async function GET() {
+  if (!developmentFixturesEnabled()) return unavailable();
+
   return NextResponse.json({
     route: "/api/generate",
     method: "POST",
@@ -22,6 +29,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!developmentFixturesEnabled()) return unavailable();
+
   const body = await request.json().catch(() => null);
   const parsed = assessmentInputSchema.safeParse(body);
 

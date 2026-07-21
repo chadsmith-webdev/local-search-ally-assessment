@@ -3,6 +3,7 @@ import { getAssessmentRepository } from "@/lib/assessment-store";
 import { PayPalRestClient } from "@/lib/paypal-client";
 import { capturePayPalOrder } from "@/lib/paypal-commerce";
 import { getPayPalConfig } from "@/lib/paypal-config";
+import { checkRateLimit, hashRateLimitKey, rateLimitResponseMessage } from "@/lib/rate-limit";
 
 type RouteContext = {
   params: Promise<{
@@ -15,6 +16,14 @@ export async function POST(_request: Request, context: RouteContext) {
   const repository = getAssessmentRepository();
   const now = new Date().toISOString();
   try {
+    const limit = checkRateLimit({
+      bucket: "paypal-capture",
+      key: hashRateLimitKey(orderId),
+      limit: 8,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!limit.allowed) return NextResponse.json({ error: rateLimitResponseMessage() }, { status: 429 });
+
     const attempt = await repository.findCheckoutAttemptByPayPalOrderId(orderId);
     await repository.recordEvent({
       name: "paypal_capture_requested",

@@ -4,6 +4,7 @@ import { UnavailableState } from "@/components/product/assessment-funnel";
 import { validateResultAccessToken } from "@/domain/result-access";
 import { getPublicResultsPageOffer } from "@/domain/offers";
 import { getAssessmentRepository } from "@/lib/assessment-store";
+import { noIndexMetadata } from "@/lib/runtime-guards";
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -11,6 +12,8 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
+
+export const metadata = noIndexMetadata;
 
 export default async function ResultPage({ params, searchParams }: { params: Params; searchParams: SearchParams }) {
   const { id } = await params;

@@ -3,6 +3,7 @@ import { Card } from "@/components/foundation/Card";
 import { Container, Grid, Stack } from "@/components/foundation/Layout";
 import { formatOfferPrice } from "@/domain/offers";
 import { loadCheckoutEligibility } from "@/lib/paypal-commerce";
+import { noIndexMetadata, sandboxCheckoutPreviewEnabled } from "@/lib/runtime-guards";
 import { PayPalSandboxCheckout } from "./PayPalSandboxCheckout";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -11,11 +12,28 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+export const metadata = noIndexMetadata;
+
 export default async function ContractorReviewProofCheckoutPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
   const resultId = firstParam(params.result);
   const tokenValue = firstParam(params.token);
   const publicClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+
+  if (!sandboxCheckoutPreviewEnabled()) {
+    return (
+      <main className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
+        <Container className="max-w-3xl">
+          <Card>
+            <h1 className="font-display text-3xl font-semibold">Checkout unavailable</h1>
+            <p className="mt-3 leading-7 text-text-secondary">
+              Online checkout is not available for this product yet.
+            </p>
+          </Card>
+        </Container>
+      </main>
+    );
+  }
 
   if (!resultId || !tokenValue || !publicClientId) {
     return (

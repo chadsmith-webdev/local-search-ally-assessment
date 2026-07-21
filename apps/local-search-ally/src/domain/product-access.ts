@@ -155,9 +155,9 @@ export function validateProductAccessToken({
 }
 
 export const developmentProductAccessToken =
-  "dev_pat_c6f18c3eb6714a3c9b8177d8b64e87e2a496b964a2d74e0aa02c47b6f4db2a34";
+  "development-product-access-token-fixture";
 export const expiredDevelopmentProductAccessToken =
-  "dev_pat_6e90d5f163154d2fa36544827d8ac1449f2235db55ae4fc08a20ac40533f7c71";
+  "expired-development-product-access-token-fixture";
 
 export const developmentProductEntitlements = productEntitlementSchema.array().parse([
   {

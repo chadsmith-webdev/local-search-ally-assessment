@@ -26,6 +26,7 @@ describe("Contractor Review and Proof System resource route", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toBe("application/pdf");
     expect(response.headers.get("content-disposition")).toContain("contractor-review-proof-system-guide-v1.pdf");
+    expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
     expect((await response.arrayBuffer()).byteLength).toBeGreaterThan(1000);
   });
 

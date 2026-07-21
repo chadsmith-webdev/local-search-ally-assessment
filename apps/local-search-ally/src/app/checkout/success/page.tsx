@@ -6,8 +6,11 @@ import { getAssessmentRepository } from "@/lib/assessment-store";
 import { PayPalRestClient } from "@/lib/paypal-client";
 import { fulfillCapturedPayPalOrder } from "@/lib/paypal-commerce";
 import { getPayPalConfig } from "@/lib/paypal-config";
+import { noIndexMetadata } from "@/lib/runtime-guards";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export const metadata = noIndexMetadata;
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;

@@ -49,6 +49,7 @@ Production must use `ASSESSMENT_STORE_ADAPTER=postgres` and `DATABASE_URL`; it n
 
 PayPal sandbox checkout, verified sandbox capture, and product entitlement unlocks are documented in `docs/paypal-commerce.md`.
 Resend transactional delivery is documented in `docs/transactional-email.md`.
+Launch hardening, environment separation, route inventory, and the manual launch checklist are documented in `docs/launch-readiness.md`.
 Live checkout, live payment webhooks, automatic refund handling, and public product activation remain blocked external integrations.
 
 ## Folder Structure
