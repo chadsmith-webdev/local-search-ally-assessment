@@ -1,13 +1,10 @@
 import { createEntityId } from "@/domain/ids";
-import type { AssessmentLead } from "@/domain/leads";
-import type { ResultEmailJob } from "@/domain/result-email";
-import type { AssessmentSession } from "@/domain/assessment-session";
 import { buildAssessmentInputFromAnswers, firstIncompleteStep } from "@/domain/assessment-session";
 import type { SavedAssessmentResult } from "@/domain/results";
 import { scoreAssessment } from "@/domain/scoring";
 import { composeAssessmentOpenUI } from "@/openui/compose";
-import type { AssessmentRepository, ResultAccessCreation } from "./assessment-repository";
 import { getAssessmentRepository } from "./assessment-store";
+import { queueResultEmailEvent, sendAssessmentResultEmail } from "./transactional-email-service";
 
 export type GenerationResult =
   | {
@@ -72,55 +69,6 @@ function attemptServerSafeOpenUICorrection(response: string) {
     corrected = `root = ${corrected.slice(firstAssessment)}`;
   }
   return corrected;
-}
-
-async function queueResultEmail({
-  store,
-  session,
-  lead,
-  result,
-  access,
-  now,
-}: {
-  store: AssessmentRepository;
-  session: AssessmentSession;
-  lead: AssessmentLead;
-  result: SavedAssessmentResult;
-  access: ResultAccessCreation;
-  now: string;
-}) {
-  const idempotencyKey = `result-email:${result.id}`;
-
-  const job: ResultEmailJob = {
-    id: createEntityId("event"),
-    leadId: lead.id,
-    assessmentId: session.id,
-    resultId: result.id,
-    recipientEmail: lead.email,
-    resultUrlPath: `/results/${result.id}`,
-    resultAccessTokenId: access.token.id,
-    resultCategory: result.result.primaryDiagnosisCategory,
-    recommendedOfferSlug: result.result.recommendedOfferSlug,
-    assessmentDeliveryConsent: lead.assessmentDeliveryConsent,
-    marketingConsent: lead.marketingConsent,
-    idempotencyKey,
-    status: "development-unsent",
-    attemptCount: 0,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const queued = await store.queueResultEmailOnce(job);
-  await store.recordEvent({
-    name: "result_email_queued",
-    assessmentId: session.id,
-    leadId: lead.id,
-    resultId: result.id,
-    offerSlug: result.result.recommendedOfferSlug,
-    idempotencyKey,
-    occurredAt: now,
-  });
-  return queued;
 }
 
 export async function generateAssessmentResult({
@@ -200,7 +148,7 @@ export async function generateAssessmentResult({
     const { persistedResult, access } = await store.transaction(async (transaction) => {
       const persistedResult = await transaction.createResultOnce(savedResult);
       const access = await transaction.createResultAccess(persistedResult, now);
-      await queueResultEmail({ store: transaction, session, lead, result: persistedResult, access, now });
+      await queueResultEmailEvent({ repository: transaction, sessionId: session.id, lead, result: persistedResult, access, now });
       if (rendererMode === "deterministic-fallback") {
         await transaction.recordEvent({
           name: "deterministic_fallback_used",
@@ -241,6 +189,7 @@ export async function generateAssessmentResult({
       return { persistedResult, access };
     });
     const resultUrl = resultUrlFor(persistedResult.id, access.tokenValue, origin);
+    await sendAssessmentResultEmail({ resultId: persistedResult.id, access, repository: store, now }).catch(() => undefined);
 
     return {
       status: "completed",

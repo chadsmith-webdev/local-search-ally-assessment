@@ -33,6 +33,7 @@ import {
 } from "@/domain/result-access";
 import { resultEmailJobSchema, type ResultEmailJob } from "@/domain/result-email";
 import { savedAssessmentResultSchema, type SavedAssessmentResult } from "@/domain/results";
+import { resendWebhookEventSchema, type ResendWebhookEvent } from "@/domain/transactional-email";
 import { createEntityId } from "@/domain/ids";
 import {
   AssessmentPersistenceError,
@@ -202,7 +203,18 @@ function mapEmailJob(row: Record<string, unknown>): ResultEmailJob {
       idempotencyKey: row.idempotency_key,
       status: row.status,
       attemptCount: row.attempt_count,
+      provider: optionalString(row.provider),
+      templateId: optionalString(row.template_id),
+      templateVersion: optionalString(row.template_version),
       providerMessageId: optionalString(row.provider_message_id),
+      lastAttemptedAt: optionalIso(row.last_attempted_at),
+      sentAt: optionalIso(row.sent_at),
+      deliveredAt: optionalIso(row.delivered_at),
+      delayedAt: optionalIso(row.delayed_at),
+      failedAt: optionalIso(row.failed_at),
+      bouncedAt: optionalIso(row.bounced_at),
+      complainedAt: optionalIso(row.complained_at),
+      errorCode: optionalString(row.error_code),
       errorMessage: optionalString(row.error_message),
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
@@ -330,6 +342,24 @@ function mapPayPalWebhookEvent(row: Record<string, unknown>): PayPalWebhookEvent
   );
 }
 
+function mapResendWebhookEvent(row: Record<string, unknown>): ResendWebhookEvent {
+  return parsePersisted("Resend webhook event", () =>
+    resendWebhookEventSchema.parse({
+      id: row.id,
+      resendEventId: row.resend_event_id,
+      providerEmailId: optionalString(row.provider_email_id),
+      eventType: row.event_type,
+      processingStatus: row.processing_status,
+      attemptCount: row.attempt_count,
+      firstReceivedAt: iso(row.first_received_at),
+      lastAttemptedAt: optionalIso(row.last_attempted_at),
+      processedAt: optionalIso(row.processed_at),
+      errorCode: optionalString(row.error_code),
+      errorMessage: optionalString(row.error_message),
+    }),
+  );
+}
+
 function mapProductDeliveryEvent(row: Record<string, unknown>): ProductDeliveryEvent {
   return parsePersisted("product delivery event", () =>
     productDeliveryEventSchema.parse({
@@ -339,13 +369,23 @@ function mapProductDeliveryEvent(row: Record<string, unknown>): ProductDeliveryE
       leadId: row.lead_id,
       productSlug: row.product_slug,
       recipientEmail: row.recipient_email,
+      provider: optionalString(row.provider),
+      templateId: optionalString(row.template_id),
+      templateVersion: optionalString(row.template_version),
       status: row.status,
       idempotencyKey: row.idempotency_key,
       attemptCount: row.attempt_count,
       providerMessageId: optionalString(row.provider_message_id),
+      lastAttemptedAt: optionalIso(row.last_attempted_at),
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
       sentAt: optionalIso(row.sent_at),
+      deliveredAt: optionalIso(row.delivered_at),
+      delayedAt: optionalIso(row.delayed_at),
+      failedAt: optionalIso(row.failed_at),
+      bouncedAt: optionalIso(row.bounced_at),
+      complainedAt: optionalIso(row.complained_at),
+      errorCode: optionalString(row.error_code),
       errorMessage: optionalString(row.error_message),
     }),
   );
@@ -709,13 +749,29 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         INSERT INTO result_email_events (
           id, lead_id, assessment_id, result_id, recipient_email, result_url_path, result_access_token_id,
           result_category, recommended_offer_slug, assessment_delivery_consent_json, marketing_consent_json,
-          idempotency_key, status, attempt_count, provider_message_id, error_message, created_at, updated_at
+          provider, template_id, template_version, idempotency_key, status, attempt_count, provider_message_id,
+          last_attempted_at, sent_at, delivered_at, delayed_at, failed_at, bounced_at, complained_at,
+          error_code, error_message, created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12, $13, $14, $15, $16, $17, $18)
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12, $13, $14, $15, $16,
+          $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
+        )
         ON CONFLICT (id) DO UPDATE SET
+          provider = EXCLUDED.provider,
+          template_id = EXCLUDED.template_id,
+          template_version = EXCLUDED.template_version,
           status = EXCLUDED.status,
           attempt_count = EXCLUDED.attempt_count,
           provider_message_id = EXCLUDED.provider_message_id,
+          last_attempted_at = EXCLUDED.last_attempted_at,
+          sent_at = EXCLUDED.sent_at,
+          delivered_at = EXCLUDED.delivered_at,
+          delayed_at = EXCLUDED.delayed_at,
+          failed_at = EXCLUDED.failed_at,
+          bounced_at = EXCLUDED.bounced_at,
+          complained_at = EXCLUDED.complained_at,
+          error_code = EXCLUDED.error_code,
           error_message = EXCLUDED.error_message,
           updated_at = EXCLUDED.updated_at
         RETURNING *
@@ -732,10 +788,21 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         parsed.recommendedOfferSlug,
         JSON.stringify(parsed.assessmentDeliveryConsent),
         parsed.marketingConsent ? JSON.stringify(parsed.marketingConsent) : null,
+        parsed.provider ?? null,
+        parsed.templateId ?? null,
+        parsed.templateVersion ?? null,
         parsed.idempotencyKey,
         parsed.status,
         parsed.attemptCount,
         parsed.providerMessageId ?? null,
+        parsed.lastAttemptedAt ?? null,
+        parsed.sentAt ?? null,
+        parsed.deliveredAt ?? null,
+        parsed.delayedAt ?? null,
+        parsed.failedAt ?? null,
+        parsed.bouncedAt ?? null,
+        parsed.complainedAt ?? null,
+        parsed.errorCode ?? null,
         parsed.errorMessage ?? null,
         parsed.createdAt,
         parsed.updatedAt,
@@ -751,9 +818,14 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         INSERT INTO result_email_events (
           id, lead_id, assessment_id, result_id, recipient_email, result_url_path, result_access_token_id,
           result_category, recommended_offer_slug, assessment_delivery_consent_json, marketing_consent_json,
-          idempotency_key, status, attempt_count, provider_message_id, error_message, created_at, updated_at
+          provider, template_id, template_version, idempotency_key, status, attempt_count, provider_message_id,
+          last_attempted_at, sent_at, delivered_at, delayed_at, failed_at, bounced_at, complained_at,
+          error_code, error_message, created_at, updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12, $13, $14, $15, $16, $17, $18)
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12, $13, $14, $15, $16,
+          $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
+        )
         ON CONFLICT (idempotency_key) DO NOTHING
         RETURNING *
       `,
@@ -769,10 +841,21 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         parsed.recommendedOfferSlug,
         JSON.stringify(parsed.assessmentDeliveryConsent),
         parsed.marketingConsent ? JSON.stringify(parsed.marketingConsent) : null,
+        parsed.provider ?? null,
+        parsed.templateId ?? null,
+        parsed.templateVersion ?? null,
         parsed.idempotencyKey,
         parsed.status,
         parsed.attemptCount,
         parsed.providerMessageId ?? null,
+        parsed.lastAttemptedAt ?? null,
+        parsed.sentAt ?? null,
+        parsed.deliveredAt ?? null,
+        parsed.delayedAt ?? null,
+        parsed.failedAt ?? null,
+        parsed.bouncedAt ?? null,
+        parsed.complainedAt ?? null,
+        parsed.errorCode ?? null,
         parsed.errorMessage ?? null,
         parsed.createdAt,
         parsed.updatedAt,
@@ -786,6 +869,11 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
 
   async findEmailJobByIdempotencyKey(idempotencyKey: string) {
     const result = await this.query("SELECT * FROM result_email_events WHERE idempotency_key = $1", [idempotencyKey]);
+    return result.rows[0] ? mapEmailJob(result.rows[0]) : null;
+  }
+
+  async findEmailJobByProviderMessageId(providerMessageId: string) {
+    const result = await this.query("SELECT * FROM result_email_events WHERE provider_message_id = $1", [providerMessageId]);
     return result.rows[0] ? mapEmailJob(result.rows[0]) : null;
   }
 
@@ -1084,21 +1172,89 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
     return result.rows[0] ? mapPayPalWebhookEvent(result.rows[0]) : null;
   }
 
+  async saveResendWebhookEvent(event: ResendWebhookEvent) {
+    const parsed = resendWebhookEventSchema.parse(event);
+    const result = await this.query(
+      `
+        INSERT INTO resend_webhook_events (
+          id, resend_event_id, provider_email_id, event_type, processing_status, attempt_count,
+          first_received_at, last_attempted_at, processed_at, error_code, error_message
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (resend_event_id) DO UPDATE SET
+          provider_email_id = EXCLUDED.provider_email_id,
+          processing_status = EXCLUDED.processing_status,
+          attempt_count = EXCLUDED.attempt_count,
+          last_attempted_at = EXCLUDED.last_attempted_at,
+          processed_at = EXCLUDED.processed_at,
+          error_code = EXCLUDED.error_code,
+          error_message = EXCLUDED.error_message
+        RETURNING *
+      `,
+      [
+        parsed.id,
+        parsed.resendEventId,
+        parsed.providerEmailId ?? null,
+        parsed.eventType,
+        parsed.processingStatus,
+        parsed.attemptCount,
+        parsed.firstReceivedAt,
+        parsed.lastAttemptedAt ?? null,
+        parsed.processedAt ?? null,
+        parsed.errorCode ?? null,
+        parsed.errorMessage ?? null,
+      ],
+    );
+    return mapResendWebhookEvent(result.rows[0]);
+  }
+
+  async createResendWebhookEventOnce(event: ResendWebhookEvent) {
+    const existing = await this.findResendWebhookEvent(event.resendEventId);
+    if (existing) {
+      return this.saveResendWebhookEvent({
+        ...existing,
+        attemptCount: existing.attemptCount + 1,
+        lastAttemptedAt: event.lastAttemptedAt ?? event.firstReceivedAt,
+      });
+    }
+    return this.saveResendWebhookEvent(event);
+  }
+
+  async findResendWebhookEvent(resendEventId: string) {
+    const result = await this.query("SELECT * FROM resend_webhook_events WHERE resend_event_id = $1", [resendEventId]);
+    return result.rows[0] ? mapResendWebhookEvent(result.rows[0]) : null;
+  }
+
   async saveProductDeliveryEvent(event: ProductDeliveryEvent) {
     const parsed = productDeliveryEventSchema.parse(event);
     const result = await this.query(
       `
         INSERT INTO product_delivery_events (
-          id, entitlement_id, purchase_id, lead_id, product_slug, recipient_email, status, idempotency_key,
-          attempt_count, provider_message_id, created_at, updated_at, sent_at, error_message
+          id, entitlement_id, purchase_id, lead_id, product_slug, recipient_email, provider, template_id,
+          template_version, status, idempotency_key, attempt_count, provider_message_id, last_attempted_at,
+          created_at, updated_at, sent_at, delivered_at, delayed_at, failed_at, bounced_at, complained_at,
+          error_code, error_message
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+          $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+        )
         ON CONFLICT (id) DO UPDATE SET
+          provider = EXCLUDED.provider,
+          template_id = EXCLUDED.template_id,
+          template_version = EXCLUDED.template_version,
           status = EXCLUDED.status,
           attempt_count = EXCLUDED.attempt_count,
           provider_message_id = EXCLUDED.provider_message_id,
+          last_attempted_at = EXCLUDED.last_attempted_at,
           updated_at = EXCLUDED.updated_at,
           sent_at = EXCLUDED.sent_at,
+          delivered_at = EXCLUDED.delivered_at,
+          delayed_at = EXCLUDED.delayed_at,
+          failed_at = EXCLUDED.failed_at,
+          bounced_at = EXCLUDED.bounced_at,
+          complained_at = EXCLUDED.complained_at,
+          error_code = EXCLUDED.error_code,
           error_message = EXCLUDED.error_message
         RETURNING *
       `,
@@ -1109,13 +1265,23 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         parsed.leadId,
         parsed.productSlug,
         parsed.recipientEmail,
+        parsed.provider ?? null,
+        parsed.templateId ?? null,
+        parsed.templateVersion ?? null,
         parsed.status,
         parsed.idempotencyKey,
         parsed.attemptCount,
         parsed.providerMessageId ?? null,
+        parsed.lastAttemptedAt ?? null,
         parsed.createdAt,
         parsed.updatedAt,
         parsed.sentAt ?? null,
+        parsed.deliveredAt ?? null,
+        parsed.delayedAt ?? null,
+        parsed.failedAt ?? null,
+        parsed.bouncedAt ?? null,
+        parsed.complainedAt ?? null,
+        parsed.errorCode ?? null,
         parsed.errorMessage ?? null,
       ],
     );
@@ -1130,6 +1296,11 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
 
   async findProductDeliveryEventByIdempotencyKey(idempotencyKey: string) {
     const result = await this.query("SELECT * FROM product_delivery_events WHERE idempotency_key = $1", [idempotencyKey]);
+    return result.rows[0] ? mapProductDeliveryEvent(result.rows[0]) : null;
+  }
+
+  async findProductDeliveryEventByProviderMessageId(providerMessageId: string) {
+    const result = await this.query("SELECT * FROM product_delivery_events WHERE provider_message_id = $1", [providerMessageId]);
     return result.rows[0] ? mapProductDeliveryEvent(result.rows[0]) : null;
   }
 

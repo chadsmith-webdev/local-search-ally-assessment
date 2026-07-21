@@ -6,6 +6,7 @@ import type { AssessmentRepository } from "./assessment-repository";
 import { getAssessmentRepository } from "./assessment-store";
 import type { PayPalClient, PayPalOrder } from "./paypal-client";
 import { getPayPalConfig, type PayPalConfig } from "./paypal-config";
+import { queueProductDeliveryEvent, sendProductAccessEmail } from "./transactional-email-service";
 
 export const sandboxCheckoutSlug = "contractor-review-proof-system";
 const sandboxProductSlug = "contractor-review-proof-system";
@@ -233,7 +234,7 @@ export async function fulfillCapturedPayPalOrder({
   }
   const purchaserEmail = order.payer?.email_address ?? undefined;
 
-  return repository.transaction(async (transaction) => {
+  const fulfilled = await repository.transaction(async (transaction) => {
     const purchase = await transaction.createPurchaseOnce({
       id: createEntityId("purchase"),
       checkoutAttemptId: attempt.id,
@@ -268,19 +269,7 @@ export async function fulfillCapturedPayPalOrder({
       createdAt: now,
       updatedAt: now,
     });
-    const delivery = await transaction.queueProductDeliveryEventOnce({
-      id: createEntityId("event"),
-      entitlementId: entitlement.id,
-      purchaseId: purchase.id,
-      leadId: purchase.leadId,
-      productSlug: purchase.productSlug,
-      recipientEmail: lead.email,
-      status: "development-unsent",
-      idempotencyKey: `product-delivery:${purchase.id}:${entitlement.id}`,
-      attemptCount: 0,
-      createdAt: now,
-      updatedAt: now,
-    });
+    const delivery = await queueProductDeliveryEvent({ repository: transaction, purchase, entitlement, lead, now });
     const fulfilledPurchase = await transaction.savePurchase({
       ...purchase,
       fulfillmentStatus: "fulfilled",
@@ -322,6 +311,13 @@ export async function fulfillCapturedPayPalOrder({
     });
     return { purchase: fulfilledPurchase, entitlement, delivery };
   });
+  await sendProductAccessEmail({
+    purchaseId: fulfilled.purchase.id,
+    entitlement: fulfilled.entitlement,
+    repository,
+    now,
+  }).catch(() => undefined);
+  return fulfilled;
 }
 
 export async function capturePayPalOrder({

@@ -14,6 +14,7 @@ const requiredTables = [
   "product_access_tokens",
   "paypal_webhook_events",
   "product_delivery_events",
+  "resend_webhook_events",
   "app_migrations",
 ];
 
@@ -23,6 +24,9 @@ const requiredIndexes = [
   "assessment_results_assessment_id_key",
   "result_access_tokens_token_digest_key",
   "result_email_events_idempotency_key_key",
+  "result_email_events_provider_message_id_uidx",
+  "result_email_events_status_idx",
+  "result_email_events_recipient_email_idx",
   "funnel_events_idempotency_key_key",
   "funnel_events_purchase_id_idx",
   "paypal_checkout_attempts_paypal_order_id_key",
@@ -34,6 +38,14 @@ const requiredIndexes = [
   "product_access_tokens_token_digest_key",
   "paypal_webhook_events_paypal_event_id_key",
   "product_delivery_events_idempotency_key_key",
+  "product_delivery_events_provider_message_id_uidx",
+  "product_delivery_events_status_idx",
+  "product_delivery_events_recipient_email_idx",
+  "product_delivery_events_purchase_id_idx",
+  "product_delivery_events_entitlement_id_idx",
+  "resend_webhook_events_resend_event_id_key",
+  "resend_webhook_events_provider_email_id_idx",
+  "resend_webhook_events_processing_status_idx",
 ];
 
 let connection;

@@ -19,6 +19,7 @@ import type { ResultEmailJob } from "@/domain/result-email";
 import type { AssessmentSession } from "@/domain/assessment-session";
 import type { SavedAssessmentResult } from "@/domain/results";
 import type { FunnelEvent, FunnelEventName } from "@/domain/events";
+import type { ResendWebhookEvent } from "@/domain/transactional-email";
 import {
   AssessmentPersistenceError,
   type AssessmentRepository,
@@ -41,6 +42,7 @@ interface AssessmentStoreState {
   activeTokenDigestIds: Map<string, string>;
   emailJobs: Map<string, ResultEmailJob>;
   emailJobsByIdempotencyKey: Map<string, string>;
+  emailJobsByProviderMessageId: Map<string, string>;
   checkoutAttempts: Map<string, PayPalCheckoutAttempt>;
   checkoutAttemptIdsByIdempotencyKey: Map<string, string>;
   checkoutAttemptIdsByPayPalOrderId: Map<string, string>;
@@ -54,8 +56,10 @@ interface AssessmentStoreState {
   productAccessTokenIdsByProductSlug: Map<string, Set<string>>;
   activeProductAccessTokenDigestIds: Map<string, string>;
   paypalWebhookEvents: Map<string, PayPalWebhookEvent>;
+  resendWebhookEvents: Map<string, ResendWebhookEvent>;
   productDeliveryEvents: Map<string, ProductDeliveryEvent>;
   productDeliveryEventIdsByIdempotencyKey: Map<string, string>;
+  productDeliveryEventIdsByProviderMessageId: Map<string, string>;
   events: FunnelEvent[];
   idempotencyKeys: Set<string>;
 }
@@ -82,6 +86,7 @@ function createState(): AssessmentStoreState {
     activeTokenDigestIds: new Map(),
     emailJobs: new Map(),
     emailJobsByIdempotencyKey: new Map(),
+    emailJobsByProviderMessageId: new Map(),
     checkoutAttempts: new Map(),
     checkoutAttemptIdsByIdempotencyKey: new Map(),
     checkoutAttemptIdsByPayPalOrderId: new Map(),
@@ -95,8 +100,10 @@ function createState(): AssessmentStoreState {
     productAccessTokenIdsByProductSlug: new Map(),
     activeProductAccessTokenDigestIds: new Map(),
     paypalWebhookEvents: new Map(),
+    resendWebhookEvents: new Map(),
     productDeliveryEvents: new Map(),
     productDeliveryEventIdsByIdempotencyKey: new Map(),
+    productDeliveryEventIdsByProviderMessageId: new Map(),
     events: [],
     idempotencyKeys: new Set(),
   };
@@ -116,6 +123,7 @@ function cloneState(state: AssessmentStoreState): AssessmentStoreState {
     activeTokenDigestIds: new Map(state.activeTokenDigestIds),
     emailJobs: new Map(state.emailJobs),
     emailJobsByIdempotencyKey: new Map(state.emailJobsByIdempotencyKey),
+    emailJobsByProviderMessageId: new Map(state.emailJobsByProviderMessageId),
     checkoutAttempts: new Map(state.checkoutAttempts),
     checkoutAttemptIdsByIdempotencyKey: new Map(state.checkoutAttemptIdsByIdempotencyKey),
     checkoutAttemptIdsByPayPalOrderId: new Map(state.checkoutAttemptIdsByPayPalOrderId),
@@ -129,8 +137,10 @@ function cloneState(state: AssessmentStoreState): AssessmentStoreState {
     productAccessTokenIdsByProductSlug: new Map([...state.productAccessTokenIdsByProductSlug].map(([key, values]) => [key, new Set(values)])),
     activeProductAccessTokenDigestIds: new Map(state.activeProductAccessTokenDigestIds),
     paypalWebhookEvents: new Map(state.paypalWebhookEvents),
+    resendWebhookEvents: new Map(state.resendWebhookEvents),
     productDeliveryEvents: new Map(state.productDeliveryEvents),
     productDeliveryEventIdsByIdempotencyKey: new Map(state.productDeliveryEventIdsByIdempotencyKey),
+    productDeliveryEventIdsByProviderMessageId: new Map(state.productDeliveryEventIdsByProviderMessageId),
     events: [...state.events],
     idempotencyKeys: new Set(state.idempotencyKeys),
   };
@@ -149,6 +159,7 @@ function copyStateInto(target: AssessmentStoreState, source: AssessmentStoreStat
   target.activeTokenDigestIds = source.activeTokenDigestIds;
   target.emailJobs = source.emailJobs;
   target.emailJobsByIdempotencyKey = source.emailJobsByIdempotencyKey;
+  target.emailJobsByProviderMessageId = source.emailJobsByProviderMessageId;
   target.checkoutAttempts = source.checkoutAttempts;
   target.checkoutAttemptIdsByIdempotencyKey = source.checkoutAttemptIdsByIdempotencyKey;
   target.checkoutAttemptIdsByPayPalOrderId = source.checkoutAttemptIdsByPayPalOrderId;
@@ -162,8 +173,10 @@ function copyStateInto(target: AssessmentStoreState, source: AssessmentStoreStat
   target.productAccessTokenIdsByProductSlug = source.productAccessTokenIdsByProductSlug;
   target.activeProductAccessTokenDigestIds = source.activeProductAccessTokenDigestIds;
   target.paypalWebhookEvents = source.paypalWebhookEvents;
+  target.resendWebhookEvents = source.resendWebhookEvents;
   target.productDeliveryEvents = source.productDeliveryEvents;
   target.productDeliveryEventIdsByIdempotencyKey = source.productDeliveryEventIdsByIdempotencyKey;
+  target.productDeliveryEventIdsByProviderMessageId = source.productDeliveryEventIdsByProviderMessageId;
   target.events = source.events;
   target.idempotencyKeys = source.idempotencyKeys;
 }
@@ -320,8 +333,13 @@ function createMemoryAssessmentRepositoryFromState(state: AssessmentStoreState):
       if (existingId && existingId !== job.id) {
         throw new AssessmentPersistenceError(`Result email idempotency key already exists: ${job.idempotencyKey}.`, "email-event-conflict");
       }
+      const existingProviderId = job.providerMessageId ? state.emailJobsByProviderMessageId.get(job.providerMessageId) : undefined;
+      if (existingProviderId && existingProviderId !== job.id) {
+        throw new AssessmentPersistenceError("Result email provider message ID already exists.", "email-event-conflict");
+      }
       state.emailJobs.set(job.id, job);
       state.emailJobsByIdempotencyKey.set(job.idempotencyKey, job.id);
+      if (job.providerMessageId) state.emailJobsByProviderMessageId.set(job.providerMessageId, job.id);
       return job;
     },
     async queueResultEmailOnce(job: ResultEmailJob) {
@@ -331,6 +349,10 @@ function createMemoryAssessmentRepositoryFromState(state: AssessmentStoreState):
     },
     async findEmailJobByIdempotencyKey(idempotencyKey: string) {
       const id = state.emailJobsByIdempotencyKey.get(idempotencyKey);
+      return id ? state.emailJobs.get(id) ?? null : null;
+    },
+    async findEmailJobByProviderMessageId(providerMessageId: string) {
+      const id = state.emailJobsByProviderMessageId.get(providerMessageId);
       return id ? state.emailJobs.get(id) ?? null : null;
     },
     async saveCheckoutAttempt(attempt: PayPalCheckoutAttempt) {
@@ -480,11 +502,36 @@ function createMemoryAssessmentRepositoryFromState(state: AssessmentStoreState):
     async findPayPalWebhookEvent(paypalEventId: string) {
       return state.paypalWebhookEvents.get(paypalEventId) ?? null;
     },
+    async saveResendWebhookEvent(event: ResendWebhookEvent) {
+      state.resendWebhookEvents.set(event.resendEventId, event);
+      return event;
+    },
+    async createResendWebhookEventOnce(event: ResendWebhookEvent) {
+      const existing = await this.findResendWebhookEvent(event.resendEventId);
+      if (existing) {
+        const updated = {
+          ...existing,
+          attemptCount: existing.attemptCount + 1,
+          lastAttemptedAt: event.lastAttemptedAt ?? event.firstReceivedAt,
+        };
+        state.resendWebhookEvents.set(updated.resendEventId, updated);
+        return updated;
+      }
+      return this.saveResendWebhookEvent(event);
+    },
+    async findResendWebhookEvent(resendEventId: string) {
+      return state.resendWebhookEvents.get(resendEventId) ?? null;
+    },
     async saveProductDeliveryEvent(event: ProductDeliveryEvent) {
       const existingId = state.productDeliveryEventIdsByIdempotencyKey.get(event.idempotencyKey);
       if (existingId && existingId !== event.id) throw new AssessmentPersistenceError("Product delivery event already exists.", "commerce-conflict");
+      const existingProviderId = event.providerMessageId ? state.productDeliveryEventIdsByProviderMessageId.get(event.providerMessageId) : undefined;
+      if (existingProviderId && existingProviderId !== event.id) {
+        throw new AssessmentPersistenceError("Product delivery provider message ID already exists.", "commerce-conflict");
+      }
       state.productDeliveryEvents.set(event.id, event);
       state.productDeliveryEventIdsByIdempotencyKey.set(event.idempotencyKey, event.id);
+      if (event.providerMessageId) state.productDeliveryEventIdsByProviderMessageId.set(event.providerMessageId, event.id);
       return event;
     },
     async queueProductDeliveryEventOnce(event: ProductDeliveryEvent) {
@@ -494,6 +541,10 @@ function createMemoryAssessmentRepositoryFromState(state: AssessmentStoreState):
     },
     async findProductDeliveryEventByIdempotencyKey(idempotencyKey: string) {
       const id = state.productDeliveryEventIdsByIdempotencyKey.get(idempotencyKey);
+      return id ? state.productDeliveryEvents.get(id) ?? null : null;
+    },
+    async findProductDeliveryEventByProviderMessageId(providerMessageId: string) {
+      const id = state.productDeliveryEventIdsByProviderMessageId.get(providerMessageId);
       return id ? state.productDeliveryEvents.get(id) ?? null : null;
     },
     async recordEvent(input: {
@@ -551,6 +602,7 @@ function createMemoryAssessmentRepositoryFromState(state: AssessmentStoreState):
         productEntitlements: [...state.productEntitlements.values()],
         productAccessTokens: [...state.productAccessTokens.values()],
         paypalWebhookEvents: [...state.paypalWebhookEvents.values()],
+        resendWebhookEvents: [...state.resendWebhookEvents.values()],
         productDeliveryEvents: [...state.productDeliveryEvents.values()],
       };
     },

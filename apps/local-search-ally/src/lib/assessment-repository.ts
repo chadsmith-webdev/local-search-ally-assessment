@@ -13,6 +13,7 @@ import type { ProductAccessToken, ProductEntitlement } from "@/domain/product-ac
 import type { ResultAccessToken } from "@/domain/result-access";
 import type { ResultEmailJob } from "@/domain/result-email";
 import type { SavedAssessmentResult } from "@/domain/results";
+import type { ResendWebhookEvent } from "@/domain/transactional-email";
 
 export type AssessmentStoreAdapter = "memory" | "postgres";
 
@@ -34,6 +35,7 @@ export interface AssessmentStoreSnapshot {
   productEntitlements: ProductEntitlementRecord[];
   productAccessTokens: ProductAccessToken[];
   paypalWebhookEvents: PayPalWebhookEvent[];
+  resendWebhookEvents: ResendWebhookEvent[];
   productDeliveryEvents: ProductDeliveryEvent[];
 }
 
@@ -60,6 +62,7 @@ export interface AssessmentRepository {
   saveEmailJob(job: ResultEmailJob): Promise<ResultEmailJob>;
   queueResultEmailOnce(job: ResultEmailJob): Promise<ResultEmailJob>;
   findEmailJobByIdempotencyKey(idempotencyKey: string): Promise<ResultEmailJob | null>;
+  findEmailJobByProviderMessageId(providerMessageId: string): Promise<ResultEmailJob | null>;
   saveCheckoutAttempt(attempt: PayPalCheckoutAttempt): Promise<PayPalCheckoutAttempt>;
   createCheckoutAttemptOnce(attempt: PayPalCheckoutAttempt): Promise<PayPalCheckoutAttempt>;
   findCheckoutAttempt(id: string): Promise<PayPalCheckoutAttempt | null>;
@@ -82,9 +85,13 @@ export interface AssessmentRepository {
   savePayPalWebhookEvent(event: PayPalWebhookEvent): Promise<PayPalWebhookEvent>;
   createPayPalWebhookEventOnce(event: PayPalWebhookEvent): Promise<PayPalWebhookEvent>;
   findPayPalWebhookEvent(paypalEventId: string): Promise<PayPalWebhookEvent | null>;
+  saveResendWebhookEvent(event: ResendWebhookEvent): Promise<ResendWebhookEvent>;
+  createResendWebhookEventOnce(event: ResendWebhookEvent): Promise<ResendWebhookEvent>;
+  findResendWebhookEvent(resendEventId: string): Promise<ResendWebhookEvent | null>;
   saveProductDeliveryEvent(event: ProductDeliveryEvent): Promise<ProductDeliveryEvent>;
   queueProductDeliveryEventOnce(event: ProductDeliveryEvent): Promise<ProductDeliveryEvent>;
   findProductDeliveryEventByIdempotencyKey(idempotencyKey: string): Promise<ProductDeliveryEvent | null>;
+  findProductDeliveryEventByProviderMessageId(providerMessageId: string): Promise<ProductDeliveryEvent | null>;
   recordEvent(input: {
     name: FunnelEventName;
     assessmentId?: string;

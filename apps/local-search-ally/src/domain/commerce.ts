@@ -1,6 +1,12 @@
 import { z } from "zod/v4";
 import { approvedOfferSlugSchema } from "./offers";
 import { productSlugSchema } from "./products";
+import {
+  transactionalEmailProviderSchema,
+  transactionalEmailStatusSchema,
+  transactionalEmailTemplateIdSchema,
+  transactionalEmailTemplateVersionSchema,
+} from "./transactional-email";
 
 export const paypalEnvironmentSchema = z.enum(["sandbox"]);
 export const checkoutAttemptStatusSchema = z.enum([
@@ -28,7 +34,7 @@ export const purchasePaymentStatusSchema = z.enum([
 export const purchaseFulfillmentStatusSchema = z.enum(["pending", "fulfilled", "failed", "revoked"]);
 export const productEntitlementStatusSchema = z.enum(["active", "revoked", "refunded", "expired"]);
 export const paypalWebhookProcessingStatusSchema = z.enum(["received", "processed", "rejected", "failed", "ignored"]);
-export const productDeliveryStatusSchema = z.enum(["queued", "sent", "failed", "development-unsent"]);
+export const productDeliveryStatusSchema = transactionalEmailStatusSchema;
 
 export const paypalCheckoutAttemptSchema = z.object({
   id: z.string().min(1),
@@ -110,13 +116,23 @@ export const productDeliveryEventSchema = z.object({
   leadId: z.string().min(1),
   productSlug: productSlugSchema,
   recipientEmail: z.email(),
+  provider: transactionalEmailProviderSchema.optional(),
+  templateId: transactionalEmailTemplateIdSchema.optional(),
+  templateVersion: transactionalEmailTemplateVersionSchema.optional(),
   status: productDeliveryStatusSchema,
   idempotencyKey: z.string().min(1),
   attemptCount: z.number().int().nonnegative(),
   providerMessageId: z.string().min(1).optional(),
+  lastAttemptedAt: z.iso.datetime().optional(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   sentAt: z.iso.datetime().optional(),
+  deliveredAt: z.iso.datetime().optional(),
+  delayedAt: z.iso.datetime().optional(),
+  failedAt: z.iso.datetime().optional(),
+  bouncedAt: z.iso.datetime().optional(),
+  complainedAt: z.iso.datetime().optional(),
+  errorCode: z.string().min(1).max(120).optional(),
   errorMessage: z.string().min(1).optional(),
 });
 

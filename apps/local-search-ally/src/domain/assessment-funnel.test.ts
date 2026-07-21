@@ -207,7 +207,7 @@ describe("assessment funnel foundation", () => {
 
     const snapshot = store.snapshot();
     expect(snapshot.emailJobs).toHaveLength(1);
-    expect(snapshot.emailJobs[0].status).toBe("development-unsent");
+    expect(snapshot.emailJobs[0].status).toBe("failed");
     expect(snapshot.emailJobs[0].assessmentDeliveryConsent.granted).toBe(true);
   });
 });

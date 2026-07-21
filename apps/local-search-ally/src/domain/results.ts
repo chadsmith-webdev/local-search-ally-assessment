@@ -2,7 +2,17 @@ import { z } from "zod/v4";
 import { assessmentResultSchema } from "./assessment";
 
 export const resultRendererModeSchema = z.enum(["openui", "deterministic-fallback"]);
-export const resultEmailDeliveryStatusSchema = z.enum(["not-queued", "queued", "sent", "failed"]);
+export const resultEmailDeliveryStatusSchema = z.enum([
+  "not-queued",
+  "queued",
+  "sending",
+  "sent",
+  "delivered",
+  "delayed",
+  "failed",
+  "bounced",
+  "complained",
+]);
 
 export const savedAssessmentResultSchema = z.object({
   id: z.string().min(1),

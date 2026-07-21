@@ -274,7 +274,7 @@ describe("PayPal sandbox commerce", () => {
     expect(snapshot.productEntitlements).toHaveLength(1);
     expect(snapshot.productEntitlements[0]).toMatchObject({ status: "active", productSlug: "contractor-review-proof-system" });
     expect(snapshot.productDeliveryEvents).toHaveLength(1);
-    expect(snapshot.productDeliveryEvents[0]).toMatchObject({ status: "development-unsent" });
+    expect(snapshot.productDeliveryEvents[0]).toMatchObject({ status: "failed" });
   });
 
   it("keeps pending captures pending without creating entitlement access", async () => {
