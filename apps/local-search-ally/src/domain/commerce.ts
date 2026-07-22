@@ -53,6 +53,9 @@ export const paypalCheckoutAttemptSchema = z.object({
   updatedAt: z.iso.datetime(),
   expiresAt: z.iso.datetime().optional(),
   failureReason: z.string().min(1).optional(),
+  policyVersion: z.string().min(1).optional(),
+  disclosureVersion: z.string().min(1).optional(),
+  termsAcceptedAt: z.iso.datetime().optional(),
 });
 
 export const purchaseSchema = z.object({
@@ -79,6 +82,9 @@ export const purchaseSchema = z.object({
   updatedAt: z.iso.datetime(),
   revokedAt: z.iso.datetime().optional(),
   refundedAt: z.iso.datetime().optional(),
+  policyVersion: z.string().min(1).optional(),
+  disclosureVersion: z.string().min(1).optional(),
+  termsAcceptedAt: z.iso.datetime().optional(),
 });
 
 export const productEntitlementRecordSchema = z.object({

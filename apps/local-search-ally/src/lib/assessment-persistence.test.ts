@@ -4,6 +4,7 @@ import { createAssessmentDeliveryConsent, createMarketingConsent } from "@/domai
 import type { LeadAssessmentAssociation } from "@/domain/lead-assessments";
 import type { AssessmentLead } from "@/domain/leads";
 import { validateResultAccessToken } from "@/domain/result-access";
+import { validateProductAccessToken } from "@/domain/product-access";
 import type { ResultEmailJob } from "@/domain/result-email";
 import type { SavedAssessmentResult } from "@/domain/results";
 import { scoreAssessment } from "@/domain/scoring";
@@ -164,6 +165,7 @@ describe("assessment persistence boundary", () => {
 
     expect(tokens).toHaveLength(1);
     expect(tokens[0].tokenDigest).toHaveLength(64);
+    expect(tokens[0].expiresAt).toBe("2026-08-17T12:00:00.000Z");
     expect(snapshot).not.toContain(access.tokenValue);
     expect(validateResultAccessToken({ tokenValue: access.tokenValue, resultId: result.id, tokens, now }).status).toBe("valid");
 
@@ -181,6 +183,37 @@ describe("assessment persistence boundary", () => {
     const rotated = await store.rotateResultAccessToken(result, "2026-07-18T12:03:00.000Z");
     expect(rotated.token.id).not.toBe(access.token.id);
     expect(validateResultAccessToken({ tokenValue: rotated.tokenValue, resultId: result.id, tokens: [rotated.token] }).status).toBe("valid");
+  });
+
+  it("expires secure product-access links after 30 days without revoking the entitlement", async () => {
+    const store = createMemoryAssessmentRepository();
+    const entitlement = await store.saveProductEntitlement({
+      id: "entitlement_policy_window",
+      purchaseId: "purchase_policy_window",
+      leadId: "lead_policy_window",
+      productSlug: "contractor-review-proof-system",
+      productVersion: "1.0",
+      status: "active",
+      grantedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const access = await store.createProductAccess(entitlement, now);
+    const tokens = await store.findProductAccessTokensForProduct("contractor-review-proof-system");
+    const entitlements = await store.findProductEntitlementsForProduct("contractor-review-proof-system");
+
+    expect(access.token.expiresAt).toBe("2026-08-17T12:00:00.000Z");
+    expect(
+      validateProductAccessToken({
+        tokenValue: access.tokenValue,
+        productSlug: "contractor-review-proof-system",
+        now: "2026-08-17T12:01:00.000Z",
+        entitlements,
+        tokens,
+      }).status,
+    ).toBe("expired-access");
+    expect(store.snapshot().productEntitlements[0]).toMatchObject({ status: "active" });
   });
 
   it("queues result email events idempotently without storing raw result tokens", async () => {

@@ -173,6 +173,12 @@ export function OpportunityGapHero({
             {formatOpportunityRange(missedCalls)} qualified homeowners from taking the next step.
           </p>
           <p className="mt-3 max-w-3xl text-sm leading-6">{explanation}</p>
+          <p className="mt-4 text-xs leading-5">
+            Estimates are based on supplied inputs and disclosed assumptions.{" "}
+            <a className="font-semibold underline decoration-slate/40 underline-offset-4" href="/assessment-disclaimer">
+              Assessment disclaimer
+            </a>
+          </p>
         </div>
         <Button asChild variant="secondary">
           <a href={assumptionsHref}>
@@ -609,10 +615,13 @@ export function DeterministicAssessmentFallback({ result }: { result: Assessment
           checkoutHref={`/checkout/${publicOffer.slug}`}
         />
       ) : null}
-      <a className="inline-flex items-center gap-2 text-sm font-semibold text-carolina" href="/api/generate">
-        View generation endpoint
-        <ExternalLink className="h-4 w-4" aria-hidden />
-      </a>
+      <p className="text-sm leading-6 text-text-tertiary">
+        This result is generated from normalized assessment data. Review the{" "}
+        <a className="font-semibold text-carolina" href="/assessment-disclaimer">
+          Assessment Disclaimer
+        </a>
+        .
+      </p>
     </AssessmentResults>
   );
 }

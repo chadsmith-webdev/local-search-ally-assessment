@@ -9,3 +9,4 @@
 \i persistence/migrations/001_assessment_funnel.sql
 \i persistence/migrations/002_paypal_sandbox_commerce.sql
 \i persistence/migrations/003_resend_transactional_email.sql
+\i persistence/migrations/004_policy_disclosures.sql

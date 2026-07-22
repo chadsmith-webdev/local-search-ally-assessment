@@ -21,6 +21,10 @@ describe("transactional email templates", () => {
     expect(email.html).toContain("Triangle Home Services");
     expect(email.text).toContain("$4,800-$7,200");
     expect(email.text).toContain("https://assessment.example/results/result_email?token=rat_secure");
+    expect(email.text).toContain("expires after 30 days");
+    expect(email.text).toContain("Privacy: https://assessment.example/privacy");
+    expect(email.text).toContain("Assessment disclaimer: https://assessment.example/assessment-disclaimer");
+    expect(email.text).toContain("Support: https://assessment.example/support");
     expect(`${email.html}\n${email.text}`).not.toMatch(/overall score|category score|pilot program|buy now/i);
   });
 
@@ -41,6 +45,12 @@ describe("transactional email templates", () => {
     expect(email.html).toContain("Contractor Review and Proof System");
     expect(email.text).toContain("$47.00 USD");
     expect(email.text).toContain("https://assessment.example/products/contractor-review-proof-system?token=pat_secure");
+    expect(email.text).toContain("expires after 30 days");
+    expect(email.text).toContain("active entitlement holders may request a replacement access link");
+    expect(email.text).toContain("Refund Policy: https://assessment.example/refunds");
+    expect(email.text).toContain("Product Disclaimer: https://assessment.example/product-disclaimer");
+    expect(email.text).toContain("Terms: https://assessment.example/terms");
+    expect(email.text).toContain("Privacy: https://assessment.example/privacy");
     expect(`${email.html}\n${email.text}`).not.toMatch(/pilot program|marketing/i);
   });
 });

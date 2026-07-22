@@ -50,6 +50,7 @@ Production must use `ASSESSMENT_STORE_ADAPTER=postgres` and `DATABASE_URL`; it n
 PayPal sandbox checkout, verified sandbox capture, and product entitlement unlocks are documented in `docs/paypal-commerce.md`.
 Resend transactional delivery is documented in `docs/transactional-email.md`.
 Launch hardening, environment separation, route inventory, and the manual launch checklist are documented in `docs/launch-readiness.md`.
+Policy decisions, public disclosure routes, retention boundaries, and external review blockers are documented in `docs/policy-decisions.md` and `docs/data-retention.md`.
 Live checkout, live payment webhooks, automatic refund handling, and public product activation remain blocked external integrations.
 
 ## Folder Structure
@@ -65,6 +66,9 @@ src/domain              Input, data collection, verification, scoring, and norma
 src/fixtures            Assessment and viewport fixtures
 src/openui              OpenUI definitions, examples, prompt options, validation, and composition
 docs/persistence.md     Persistence adapter, transaction, privacy, and production-startup notes
+docs/policy-decisions.md
+                        Owner-approved policy decisions and legal/tax review blockers
+docs/data-retention.md  Retention decisions and non-destructive deletion boundary
 persistence/schema.sql  Supabase Postgres schema reference
 persistence/migrations  Executable SQL migrations
 scripts                 Prompt-generation entrypoint

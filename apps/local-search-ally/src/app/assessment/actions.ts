@@ -18,6 +18,7 @@ import {
 import { getOfferRecommendationForResult } from "@/domain/offers";
 import { buildAssessmentInputFromAnswers } from "@/domain/assessment-session";
 import { scoreAssessment } from "@/domain/scoring";
+import { getBusinessPolicyConfig } from "@/domain/policies";
 import { getAssessmentRepository } from "@/lib/assessment-store";
 
 function now() {
@@ -136,6 +137,7 @@ export async function captureLeadAction(assessmentId: string, formData: FormData
   const input = buildAssessmentInputFromAnswers(session.answers);
   const previewResult = scoreAssessment(input);
   const existingLead = await store.findLeadByEmail(email);
+  const policy = getBusinessPolicyConfig();
   const lead: AssessmentLead = {
     id: existingLead?.id ?? createEntityId("lead"),
     email,
@@ -147,12 +149,12 @@ export async function captureLeadAction(assessmentId: string, formData: FormData
     recommendedOfferSlug: getOfferRecommendationForResult(previewResult)?.slug ?? previewResult.recommendedOfferSlug ?? undefined,
     assessmentDeliveryConsent: createAssessmentDeliveryConsent({
       grantedAt: submittedAt,
-      version: "assessment-contact-v1",
+      version: policy.policyVersion,
     }),
     marketingConsent: createMarketingConsent({
       granted: marketingConsentGranted,
       grantedAt: submittedAt,
-      version: "assessment-contact-v1",
+      version: policy.policyVersion,
     }),
     createdAt: existingLead?.createdAt ?? submittedAt,
     updatedAt: submittedAt,

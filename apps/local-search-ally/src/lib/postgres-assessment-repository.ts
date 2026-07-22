@@ -35,6 +35,7 @@ import { resultEmailJobSchema, type ResultEmailJob } from "@/domain/result-email
 import { savedAssessmentResultSchema, type SavedAssessmentResult } from "@/domain/results";
 import { resendWebhookEventSchema, type ResendWebhookEvent } from "@/domain/transactional-email";
 import { createEntityId } from "@/domain/ids";
+import { addDaysIso, getBusinessPolicyConfig } from "@/domain/policies";
 import {
   AssessmentPersistenceError,
   type AssessmentRepository,
@@ -257,6 +258,9 @@ function mapCheckoutAttempt(row: Record<string, unknown>): PayPalCheckoutAttempt
       updatedAt: iso(row.updated_at),
       expiresAt: optionalIso(row.expires_at),
       failureReason: optionalString(row.failure_reason),
+      policyVersion: optionalString(row.policy_version),
+      disclosureVersion: optionalString(row.disclosure_version),
+      termsAcceptedAt: optionalIso(row.terms_accepted_at),
     }),
   );
 }
@@ -287,6 +291,9 @@ function mapPurchase(row: Record<string, unknown>): Purchase {
       updatedAt: iso(row.updated_at),
       revokedAt: optionalIso(row.revoked_at),
       refundedAt: optionalIso(row.refunded_at),
+      policyVersion: optionalString(row.policy_version),
+      disclosureVersion: optionalString(row.disclosure_version),
+      termsAcceptedAt: optionalIso(row.terms_accepted_at),
     }),
   );
 }
@@ -718,6 +725,7 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
       tokenDigest: hashResultAccessToken(tokenValue),
       status: "active",
       createdAt: now,
+      expiresAt: addDaysIso(now, getBusinessPolicyConfig().secureLinkExpirationDays),
     });
     await this.query(
       "UPDATE assessment_results SET access_token_id = COALESCE(access_token_id, $2), updated_at = $3 WHERE id = $1",
@@ -884,15 +892,18 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         INSERT INTO paypal_checkout_attempts (
           id, assessment_id, result_id, lead_id, offer_slug, product_slug, product_version,
           expected_amount_cents, expected_currency, paypal_order_id, idempotency_key, status,
-          created_at, updated_at, expires_at, failure_reason
+          created_at, updated_at, expires_at, failure_reason, policy_version, disclosure_version, terms_accepted_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         ON CONFLICT (id) DO UPDATE SET
           paypal_order_id = EXCLUDED.paypal_order_id,
           status = EXCLUDED.status,
           updated_at = EXCLUDED.updated_at,
           expires_at = EXCLUDED.expires_at,
-          failure_reason = EXCLUDED.failure_reason
+          failure_reason = EXCLUDED.failure_reason,
+          policy_version = COALESCE(paypal_checkout_attempts.policy_version, EXCLUDED.policy_version),
+          disclosure_version = COALESCE(paypal_checkout_attempts.disclosure_version, EXCLUDED.disclosure_version),
+          terms_accepted_at = COALESCE(paypal_checkout_attempts.terms_accepted_at, EXCLUDED.terms_accepted_at)
         RETURNING *
       `,
       [
@@ -912,6 +923,9 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         parsed.updatedAt,
         parsed.expiresAt ?? null,
         parsed.failureReason ?? null,
+        parsed.policyVersion ?? null,
+        parsed.disclosureVersion ?? null,
+        parsed.termsAcceptedAt ?? null,
       ],
     );
     return mapCheckoutAttempt(result.rows[0]);
@@ -946,16 +960,19 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
           id, checkout_attempt_id, assessment_id, result_id, lead_id, offer_slug, product_slug, product_version,
           payment_provider, paypal_order_id, paypal_capture_id, paypal_payer_id, expected_amount_cents,
           captured_amount_cents, currency, payment_status, fulfillment_status, purchaser_email,
-          created_at, paid_at, updated_at, revoked_at, refunded_at
+          created_at, paid_at, updated_at, revoked_at, refunded_at, policy_version, disclosure_version, terms_accepted_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
         ON CONFLICT (paypal_order_id) DO UPDATE SET
           paypal_capture_id = EXCLUDED.paypal_capture_id,
           payment_status = EXCLUDED.payment_status,
           fulfillment_status = EXCLUDED.fulfillment_status,
           paid_at = EXCLUDED.paid_at,
           updated_at = EXCLUDED.updated_at,
-          refunded_at = EXCLUDED.refunded_at
+          refunded_at = EXCLUDED.refunded_at,
+          policy_version = COALESCE(purchases.policy_version, EXCLUDED.policy_version),
+          disclosure_version = COALESCE(purchases.disclosure_version, EXCLUDED.disclosure_version),
+          terms_accepted_at = COALESCE(purchases.terms_accepted_at, EXCLUDED.terms_accepted_at)
         RETURNING *
       `,
       [
@@ -982,6 +999,9 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
         parsed.updatedAt,
         parsed.revokedAt ?? null,
         parsed.refundedAt ?? null,
+        parsed.policyVersion ?? null,
+        parsed.disclosureVersion ?? null,
+        parsed.termsAcceptedAt ?? null,
       ],
     );
     return mapPurchase(result.rows[0]);
@@ -1118,6 +1138,7 @@ export class PostgresAssessmentRepository implements AssessmentRepository {
       tokenDigest: hashProductAccessToken(tokenValue),
       status: "active",
       createdAt: now,
+      expiresAt: addDaysIso(now, getBusinessPolicyConfig().secureLinkExpirationDays),
     });
     return { token, tokenValue };
   }

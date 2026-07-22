@@ -9,9 +9,12 @@ export async function POST(request: Request) {
   const repository = getAssessmentRepository();
   const now = new Date().toISOString();
   try {
-    const body = (await request.json()) as { resultId?: string; token?: string };
+    const body = (await request.json()) as { resultId?: string; token?: string; acceptedPolicies?: boolean };
     if (!body.resultId || !body.token) {
       return NextResponse.json({ error: "Secure result context is required." }, { status: 400 });
+    }
+    if (body.acceptedPolicies !== true) {
+      return NextResponse.json({ error: "Policy acknowledgement is required before checkout." }, { status: 400 });
     }
     const limit = checkRateLimit({
       bucket: "paypal-order",
@@ -36,6 +39,7 @@ export async function POST(request: Request) {
       paypal,
       config,
       now,
+      acceptedPolicies: true,
     });
     return NextResponse.json({
       orderId: order.orderId,

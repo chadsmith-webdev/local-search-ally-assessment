@@ -192,6 +192,7 @@ describe("PayPal sandbox commerce", () => {
       paypal,
       config: sandboxConfig,
       now,
+      acceptedPolicies: true,
     });
     const second = await createPayPalOrderForResult({
       resultId: result.id,
@@ -200,6 +201,7 @@ describe("PayPal sandbox commerce", () => {
       paypal,
       config: sandboxConfig,
       now,
+      acceptedPolicies: true,
     });
 
     expect(first.orderId).toBe("PAYPAL_ORDER_123");
@@ -236,6 +238,29 @@ describe("PayPal sandbox commerce", () => {
       },
     });
     expect(repository.snapshot().checkoutAttempts).toHaveLength(1);
+    expect(repository.snapshot().checkoutAttempts[0]).toMatchObject({
+      policyVersion: "policy-v1",
+      disclosureVersion: "disclosure-v1",
+      termsAcceptedAt: now,
+    });
+  });
+
+  it("requires policy acknowledgement before creating a PayPal order", async () => {
+    const { repository, result, access } = await eligibleCheckoutFixture();
+    const paypal = new MockPayPal();
+
+    await expect(
+      createPayPalOrderForResult({
+        resultId: result.id,
+        tokenValue: access.tokenValue,
+        repository,
+        paypal,
+        config: sandboxConfig,
+        now,
+        acceptedPolicies: false as true,
+      }),
+    ).rejects.toThrow(/acknowledgement/i);
+    expect(repository.snapshot().checkoutAttempts).toHaveLength(0);
   });
 
   it("creates a purchase, active entitlement, and development delivery event after verified completed capture", async () => {
@@ -248,6 +273,7 @@ describe("PayPal sandbox commerce", () => {
       paypal,
       config: sandboxConfig,
       now,
+      acceptedPolicies: true,
     });
     const attempt = await repository.findCheckoutAttemptByPayPalOrderId(order.orderId);
     paypal.captureOrder.mockResolvedValue(completedOrder(attempt?.id));
@@ -270,6 +296,9 @@ describe("PayPal sandbox commerce", () => {
       currency: "USD",
       paymentStatus: "paid",
       fulfillmentStatus: "fulfilled",
+      policyVersion: "policy-v1",
+      disclosureVersion: "disclosure-v1",
+      termsAcceptedAt: now,
     });
     expect(snapshot.productEntitlements).toHaveLength(1);
     expect(snapshot.productEntitlements[0]).toMatchObject({ status: "active", productSlug: "contractor-review-proof-system" });
@@ -287,6 +316,7 @@ describe("PayPal sandbox commerce", () => {
       paypal,
       config: sandboxConfig,
       now,
+      acceptedPolicies: true,
     });
     const attempt = await repository.findCheckoutAttemptByPayPalOrderId(order.orderId);
     paypal.captureOrder.mockResolvedValueOnce(pendingOrder(attempt?.id));
@@ -312,6 +342,7 @@ describe("PayPal sandbox commerce", () => {
       paypal,
       config: sandboxConfig,
       now,
+      acceptedPolicies: true,
     });
     const attempt = await repository.findCheckoutAttemptByPayPalOrderId(order.orderId);
     paypal.getOrder.mockResolvedValue(completedOrder(attempt?.id));

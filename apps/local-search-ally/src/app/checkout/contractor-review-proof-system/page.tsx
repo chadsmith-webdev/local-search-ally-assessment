@@ -2,6 +2,7 @@ import { Badge } from "@/components/foundation/Badge";
 import { Card } from "@/components/foundation/Card";
 import { Container, Grid, Stack } from "@/components/foundation/Layout";
 import { formatOfferPrice } from "@/domain/offers";
+import { getBusinessPolicyConfig } from "@/domain/policies";
 import { loadCheckoutEligibility } from "@/lib/paypal-commerce";
 import { noIndexMetadata, sandboxCheckoutPreviewEnabled } from "@/lib/runtime-guards";
 import { PayPalSandboxCheckout } from "./PayPalSandboxCheckout";
@@ -19,6 +20,7 @@ export default async function ContractorReviewProofCheckoutPage({ searchParams }
   const resultId = firstParam(params.result);
   const tokenValue = firstParam(params.token);
   const publicClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+  const policy = getBusinessPolicyConfig();
 
   if (!sandboxCheckoutPreviewEnabled()) {
     return (
@@ -102,6 +104,28 @@ export default async function ContractorReviewProofCheckoutPage({ searchParams }
                 <p className="mt-3 text-sm leading-6 text-text-secondary">
                   No subscription. No public purchase CTA is active in this phase.
                 </p>
+                <div className="mt-4 grid gap-2 border-t border-border pt-4 text-sm leading-6 text-text-secondary">
+                  <p>{policy.productAccessPolicy}</p>
+                  <p>Refund requests may be sent within {policy.refundPeriodDays} calendar days of purchase.</p>
+                  <p>
+                    Product materials are educational implementation resources. They do not guarantee rankings, calls,
+                    jobs, revenue, reviews, or platform outcomes.
+                  </p>
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    <a className="font-semibold text-carolina" href="/terms">
+                      Terms
+                    </a>
+                    <a className="font-semibold text-carolina" href="/refunds">
+                      Refund policy
+                    </a>
+                    <a className="font-semibold text-carolina" href="/product-disclaimer">
+                      Product disclaimer
+                    </a>
+                    <a className="font-semibold text-carolina" href="/privacy">
+                      Privacy
+                    </a>
+                  </div>
+                </div>
               </Card>
               <PayPalSandboxCheckout resultId={resultId} tokenValue={tokenValue} publicClientId={publicClientId} />
             </Stack>

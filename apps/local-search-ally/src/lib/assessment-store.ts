@@ -20,6 +20,7 @@ import type { AssessmentSession } from "@/domain/assessment-session";
 import type { SavedAssessmentResult } from "@/domain/results";
 import type { FunnelEvent, FunnelEventName } from "@/domain/events";
 import type { ResendWebhookEvent } from "@/domain/transactional-email";
+import { addDaysIso, getBusinessPolicyConfig } from "@/domain/policies";
 import {
   AssessmentPersistenceError,
   type AssessmentRepository,
@@ -300,6 +301,7 @@ function createMemoryAssessmentRepositoryFromState(state: AssessmentStoreState):
         tokenDigest: hashResultAccessToken(tokenValue),
         status: "active",
         createdAt: now,
+        expiresAt: addDaysIso(now, getBusinessPolicyConfig().secureLinkExpirationDays),
       };
       await this.saveResultAccessToken(token);
       const existingResult = state.results.get(result.id);
@@ -482,6 +484,7 @@ function createMemoryAssessmentRepositoryFromState(state: AssessmentStoreState):
         tokenDigest: hashProductAccessToken(tokenValue),
         status: "active",
         createdAt: now,
+        expiresAt: addDaysIso(now, getBusinessPolicyConfig().secureLinkExpirationDays),
       };
       await this.saveProductAccessToken(token);
       return { token, tokenValue };

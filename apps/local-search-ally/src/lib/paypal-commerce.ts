@@ -2,6 +2,7 @@ import { createEntityId } from "@/domain/ids";
 import { contractorReviewProofSystem, getOfferRecommendationForResult } from "@/domain/offers";
 import { contractorReviewProofProduct } from "@/domain/products";
 import { validateResultAccessToken } from "@/domain/result-access";
+import { getBusinessPolicyConfig } from "@/domain/policies";
 import type { AssessmentRepository } from "./assessment-repository";
 import { getAssessmentRepository } from "./assessment-store";
 import type { PayPalClient, PayPalOrder } from "./paypal-client";
@@ -98,6 +99,7 @@ export async function createPayPalOrderForResult({
   paypal,
   config = getPayPalConfig(),
   now = new Date().toISOString(),
+  acceptedPolicies,
 }: {
   resultId: string;
   tokenValue: string;
@@ -105,10 +107,13 @@ export async function createPayPalOrderForResult({
   paypal: PayPalClient;
   config?: PayPalConfig;
   now?: string;
+  acceptedPolicies: true;
 }) {
   assertSandboxCheckoutPreviewEnabled();
   if (config.environment !== "sandbox") throw new Error("Only PayPal sandbox checkout is enabled.");
+  if (acceptedPolicies !== true) throw new Error("Policy acknowledgement is required before checkout.");
   const eligibility = await loadCheckoutEligibility({ resultId, tokenValue, repository });
+  const policy = getBusinessPolicyConfig();
   const idempotencyKey = `paypal-checkout:${eligibility.result.id}:${eligibility.lead.id}:${eligibility.offer.slug}`;
   let attempt = await repository.createCheckoutAttemptOnce({
     id: createEntityId("checkout"),
@@ -124,6 +129,9 @@ export async function createPayPalOrderForResult({
     status: "created",
     createdAt: now,
     updatedAt: now,
+    policyVersion: policy.policyVersion,
+    disclosureVersion: policy.disclosureVersion,
+    termsAcceptedAt: now,
   });
 
   if (attempt.paypalOrderId && ["created", "approval-pending", "approved", "capture-pending"].includes(attempt.status)) {
@@ -260,6 +268,9 @@ export async function fulfillCapturedPayPalOrder({
       createdAt: now,
       paidAt: now,
       updatedAt: now,
+      policyVersion: attempt.policyVersion,
+      disclosureVersion: attempt.disclosureVersion,
+      termsAcceptedAt: attempt.termsAcceptedAt,
     });
     const entitlement = await transaction.createProductEntitlementOnce({
       id: createEntityId("entitlement"),

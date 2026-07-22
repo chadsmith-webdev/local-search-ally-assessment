@@ -15,6 +15,8 @@ const requiredTables = [
   "paypal_webhook_events",
   "product_delivery_events",
   "resend_webhook_events",
+  "refund_requests",
+  "data_deletion_requests",
   "app_migrations",
 ];
 
@@ -46,6 +48,12 @@ const requiredIndexes = [
   "resend_webhook_events_resend_event_id_key",
   "resend_webhook_events_provider_email_id_idx",
   "resend_webhook_events_processing_status_idx",
+  "refund_requests_purchase_id_key",
+  "refund_requests_lead_id_idx",
+  "refund_requests_status_idx",
+  "data_deletion_requests_lead_id_idx",
+  "data_deletion_requests_status_idx",
+  "data_deletion_requests_normalized_email_idx",
 ];
 
 let connection;

@@ -17,7 +17,7 @@ Landing page -> Assessment -> Review answers -> Email capture -> Result generati
 | Severity | Issue | Current handling | Required next step |
 | --- | --- | --- | --- |
 | Launch blocker | Public live purchase is not approved. | Offer remains `testing`; product remains `development`; results page hides the public purchase CTA. | Owner approval for live payments, refund policy, tax handling, support policy, and public offer activation. |
-| Launch blocker | Legal/policy pages and final disclaimers are not approved. | Assessment and email copy avoid compliance claims and guaranteed revenue. | Owner/legal review for privacy, terms, refunds, financial estimate disclaimer, and product-content disclaimer. |
+| Launch blocker | Legal/tax review is not complete. | Public policy and disclosure pages use owner-approved business terms and avoid compliance claims. | Owner/legal/tax review for privacy, terms, refunds, estimate disclaimer, product disclaimer, tax handling, and any missing legal clauses. |
 | Important | Sandbox checkout route existed on production when given a secure result token. | Production now hides sandbox checkout unless `ENABLE_SANDBOX_CHECKOUT_PREVIEW=true`. | Keep disabled for normal production; use only for controlled testing. |
 | Important | Development fixture route existed on production. | `/assessment/dev/fixtures` now returns not found in production by default. | Keep fixture routes disabled in production. |
 | Important | Development product fixture token could unlock the product page in production. | Development product access fallback is disabled in production. | Use only verified purchase entitlements in production. |
@@ -51,7 +51,7 @@ Only `NEXT_PUBLIC_PAYPAL_CLIENT_ID` is intentionally exposed to the browser. Do 
 | `/products/contractor-review-proof-system/resources/[resourceId]?token=...` | Secure token route | Requires product-access token; returns `X-Robots-Tag: noindex, nofollow`. |
 | `/api/assessment/[id]/generate` | Internal API route used by funnel | Rate limited by assessment ID. |
 | `/api/generate` | Development-only scoring endpoint | Disabled in production by default. |
-| `/api/paypal/orders`, `/api/paypal/orders/[orderId]/capture` | Internal checkout API routes | Secure context required; sandbox only; rate limited. |
+| `/api/paypal/orders`, `/api/paypal/orders/[orderId]/capture` | Internal checkout API routes | Secure context and policy acknowledgement required; sandbox only; rate limited. |
 | `/api/paypal/webhook` | Webhook route | Raw body signature verification; idempotent events. |
 | `/api/resend/webhook` | Webhook route | Raw body signature verification; idempotent events. |
 | `/api/results/[id]/resend` | Secure token API route | Cannot send to arbitrary recipients; rate limited. |
@@ -68,13 +68,15 @@ Only `NEXT_PUBLIC_PAYPAL_CLIENT_ID` is intentionally exposed to the browser. Do 
 - Resend endpoints derive recipients from persisted lead/purchase records; callers cannot supply arbitrary recipients.
 - Checkout uses the registry price and server-created PayPal order; browser-supplied prices are ignored.
 
-Current token lifetimes:
+Current token and access lifetimes:
 
-- Result-access tokens: no default expiration is currently enforced.
-- Product-access tokens: no default expiration is currently enforced.
-- Rotation exists for result tokens; product-token revocation/rotation policy needs owner approval.
+- Result-access tokens expire 30 days after creation.
+- Product-access tokens expire 30 days after creation.
+- Product entitlement grants ongoing access to purchased Version 1 unless revoked or refunded.
+- Active entitlement holders may request a replacement product-access link after a secure link expires.
+- Future major product versions are not automatically included unless expressly stated.
 
-Owner review needed: secure-link expiration, access duration, revocation process, data-deletion process, and retention periods.
+Owner/legal review still needed: revocation process, data-deletion process, final policy language, and production data-access policy.
 
 ## Webhook Resilience
 
@@ -102,7 +104,7 @@ Expected state before launch:
 - Sandbox PayPal purchases distinguishable by payment provider and sandbox-only PayPal configuration.
 - Resend email states traceable through result/product delivery events and webhook events.
 
-Owner decisions still required: backup cadence, retention period, deletion request process, disaster recovery expectations, and production data-access policy.
+Owner decisions still required: backup cadence, deletion request operating process, disaster recovery expectations, tax handling, and production data-access policy.
 
 ## Customer-Facing Error States
 
@@ -123,21 +125,21 @@ Performance watch points:
 
 | Item | Current implementation | Missing decision | Blocks launch | Review |
 | --- | --- | --- | --- | --- |
-| Privacy policy | Not implemented as approved legal page. | Final privacy terms and data practices. | Yes | Legal recommended. |
-| Terms of use | Not implemented as approved legal page. | Final terms. | Yes | Legal recommended. |
-| Refund policy | Not implemented. | Refund eligibility and process. | Yes before live payments | Legal/business. |
-| Support policy | Reply-to email exists for transactional support. | Response times and support scope. | Yes before live payments | Business. |
-| Product-access duration | Registry supports access duration, but current offer has no expiration. | Duration and revocation policy. | Yes before launch | Business/legal. |
-| Secure-link expiration | Tokens support expiration but no default policy. | Expiration windows and resend/rotation rules. | Important | Security/business. |
-| Data retention/deletion | Persistence exists; deletion policy not defined. | Retention and deletion request process. | Yes | Legal recommended. |
-| Assessment disclaimer | Estimate copy avoids guarantees. | Final approved language. | Yes | Legal recommended. |
-| Financial-estimate disclaimer | Emails/results state estimates are not guaranteed revenue. | Final approved language. | Yes | Legal recommended. |
+| Privacy policy | Public route implemented from owner-approved phase decisions. | Legal review and final business contact values. | Yes | Legal recommended. |
+| Terms of use | Public route implemented without unapproved liability, venue, arbitration, indemnification, or governing-law clauses. | Legal review for any missing legal clauses. | Yes | Legal recommended. |
+| Refund policy | 14-day request window implemented in copy and manual boundary. | Manual operating procedure and legal review. | Yes before live payments | Legal/business. |
+| Support policy | Public support route states two-business-day response target and support scope. | Final support email and operating process. | Yes before live payments | Business. |
+| Product-access duration | Ongoing access to purchased Version 1; future major versions excluded unless stated. | Revocation operating process. | Important | Business/legal. |
+| Secure-link expiration | Result and product secure links expire after 30 days. | Support workflow for replacement product-access links. | Important | Security/business. |
+| Data retention/deletion | 24-month unpurchased lead/assessment retention and 12-month operational-event retention documented; deletion request boundary exists. | Legal review and manual deletion process. | Yes | Legal recommended. |
+| Assessment disclaimer | Public route states estimates are not guaranteed outcomes or verified losses. | Legal review. | Yes | Legal recommended. |
+| Financial-estimate disclaimer | Emails/results state estimates are not guaranteed revenue. | Legal review. | Yes | Legal recommended. |
 | Customer-photo permission | Product content references ethical proof workflow. | Final permission/release guidance. | Yes | Legal recommended. |
-| Product-content disclaimer | Not finalized. | Final product usage disclaimer. | Yes | Legal recommended. |
+| Product-content disclaimer | Public route states educational materials are not guarantees, legal advice, or tax advice. | Legal review. | Yes | Legal recommended. |
 | Transactional email wording | Implemented for delivery/access only. | Final owner approval. | Important | Legal/brand. |
 | Marketing consent wording | Consent is separate and not preselected. | Final approved wording. | Yes before marketing | Legal recommended. |
 | Tax handling | Not implemented. | Sales tax responsibility/process. | Yes before live payments | Tax professional. |
-| Business contact information | Reply-to configured; public support details not finalized. | Final contact details. | Important | Business. |
+| Business contact information | Required business/policy environment variables create a launch-blocking config state when missing. | Final business legal name, support, privacy, refund, mailing address, effective date. | Yes | Business. |
 
 ## Manual Launch Checklist
 

@@ -496,6 +496,13 @@ export function ReviewAnswers({ session, action }: { session: AssessmentSession;
           })}
           <form action={action} className="pt-2">
             <Button size="lg" type="submit">Generate My Results</Button>
+            <p className="mt-3 text-xs leading-5 text-text-tertiary">
+              Opportunity estimates are based on your answers and disclosed assumptions. Review the{" "}
+              <Link className="font-semibold text-carolina" href="/assessment-disclaimer">
+                Assessment Disclaimer
+              </Link>
+              .
+            </p>
           </form>
         </Stack>
       </Card>
@@ -535,11 +542,16 @@ export function ContactCapture({
               <span>Send me practical follow-up guidance related to my assessment.</span>
             </label>
             <p className="mt-3 text-xs text-text-tertiary">
-              Your result will also display immediately after generation. Privacy and consent language should be reviewed by legal counsel before production launch.
+              Your result will also display immediately after generation. Assessment delivery is separate from optional promotional email.
             </p>
-            <a className="mt-2 inline-flex text-xs font-semibold text-carolina" href="/privacy">
-              Privacy policy
-            </a>
+            <div className="mt-2 flex flex-wrap gap-3 text-xs">
+              <a className="font-semibold text-carolina" href="/privacy">
+                Privacy policy
+              </a>
+              <a className="font-semibold text-carolina" href="/assessment-disclaimer">
+                Assessment disclaimer
+              </a>
+            </div>
           </div>
           <div className="flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
             <Button asChild variant="secondary">

@@ -8,6 +8,7 @@ import { Button } from "@/components/foundation/Button";
 import { Card } from "@/components/foundation/Card";
 import { Container, Grid, Section, Stack } from "@/components/foundation/Layout";
 import { Progress } from "@/components/foundation/Progress";
+import { getBusinessPolicyConfig } from "@/domain/policies";
 
 function statusTone(status: ProductResource["status"]) {
   if (status === "complete") return "good";
@@ -67,7 +68,7 @@ export function ProductAccessState({
             local preview states.
           </p>
           <Button asChild className="mt-6" variant="secondary">
-            <a href="/contact">
+            <a href="/support">
               Contact support
               <ExternalLink className="h-4 w-4" aria-hidden />
             </a>
@@ -154,6 +155,7 @@ export function ProductDashboard({
   tokenValue: string;
   developmentAccess?: boolean;
 }) {
+  const policy = getBusinessPolicyConfig();
   const resources = currentModule.resourceIds
     .map((resourceId) => product.resources.find((resource) => resource.id === resourceId))
     .filter((resource): resource is ProductResource => Boolean(resource));
@@ -179,6 +181,7 @@ export function ProductDashboard({
                   {product.name}
                 </h1>
                 <p className="mt-3 max-w-3xl text-lg leading-8 text-text-secondary">{product.outcomeStatement}</p>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-text-tertiary">{policy.productAccessPolicy}</p>
               </div>
               <Card className="bg-surface-2">
                 <p className="text-sm font-semibold text-text-tertiary">Progress</p>
@@ -342,11 +345,28 @@ export function ProductDashboard({
                   ) : null}
                 </div>
                 <Button asChild variant="ghost">
-                  <a href="/contact">
+                  <a href="/support">
                     Get help
                     <ExternalLink className="h-4 w-4" aria-hidden />
                   </a>
                 </Button>
+              </div>
+              <div className="border-t border-border pt-4 text-xs leading-5 text-text-tertiary">
+                <p>
+                  Support is available for access and product-use questions. Review the{" "}
+                  <a className="font-semibold text-carolina" href="/product-disclaimer">
+                    Product Disclaimer
+                  </a>
+                  ,{" "}
+                  <a className="font-semibold text-carolina" href="/terms">
+                    Terms
+                  </a>
+                  , and{" "}
+                  <a className="font-semibold text-carolina" href="/support">
+                    Support
+                  </a>{" "}
+                  policy.
+                </p>
               </div>
             </Stack>
           </Grid>
